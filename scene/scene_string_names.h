@@ -62,6 +62,7 @@ public:
 	StringName tree_entered;
 	StringName tree_exiting;
 	StringName tree_exited;
+	StringName _scene_instantiated;
 	StringName ready;
 	StringName size_flags_changed;
 	StringName minimum_size_changed;
