@@ -123,6 +123,7 @@ public:
 	StringName _draw;
 	StringName _input;
 	StringName _ready;
+	StringName _scene_instantiated;
 	StringName _unhandled_input;
 	StringName _unhandled_key_input;
 
