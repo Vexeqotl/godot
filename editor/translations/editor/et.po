@@ -2288,17 +2288,6 @@ msgstr ""
 "Lisandmooduli keelamine aadressil '%s', et vältida edasisi vigu."
 
 msgid ""
-"Unable to load addon script from path: '%s' Base type is not EditorPlugin."
-msgstr ""
-"Lisa-skripti ei olnud võimalik laadida teelt: '%s'. Baastüüp ei ole "
-"EditorPlugin."
-
-msgid "Unable to load addon script from path: '%s' Script is not in tool mode."
-msgstr ""
-"Lisa-skripti ei olnud võimalik laadida teelt: '%s'. Skript ei ole tööriista "
-"režiimis."
-
-msgid ""
 "Scene '%s' was automatically imported, so it can't be modified.\n"
 "To make changes to it, a new inherited scene can be created."
 msgstr ""
@@ -2828,6 +2817,9 @@ msgstr "Tee Unikaalseks"
 
 msgid "Make Unique (Recursive)"
 msgstr "Tee Unikaalseks (Rekursiivselt)"
+
+msgid "Save As..."
+msgstr "Salvesta kui..."
 
 msgid "Show in FileSystem"
 msgstr "Kuva failisüsteemis"
@@ -4428,9 +4420,6 @@ msgstr "Lae olemasolev resurss kettalt ning redigeeri seda."
 
 msgid "Save the currently edited resource."
 msgstr "Salvesta käesolevalt muudetud ressurss."
-
-msgid "Save As..."
-msgstr "Salvesta kui..."
 
 msgid "Extra resource options."
 msgstr "Ekstra resursi valikud."

@@ -2066,13 +2066,6 @@ msgid "Unable to load addon script from path: '%s'."
 msgstr "ไม่สามารถโหลดสคริปต์จาก: '%s'"
 
 msgid ""
-"Unable to load addon script from path: '%s' Base type is not EditorPlugin."
-msgstr "ไม่สามารถโหลดสคริปต์จาก: '%s' ไม่ได้สืบทอดจาก EditorPlugin"
-
-msgid "Unable to load addon script from path: '%s' Script is not in tool mode."
-msgstr "ไม่สามารถโหลดสคริปต์จาก: '%s' ไม่ใช่สคริปต์ tool"
-
-msgid ""
 "Scene '%s' was automatically imported, so it can't be modified.\n"
 "To make changes to it, a new inherited scene can be created."
 msgstr ""
@@ -2434,6 +2427,9 @@ msgstr "ทรัพยากรที่เลือก (%s) มีประเ
 
 msgid "Make Unique"
 msgstr "ไม่ใช้ร่วมกับวัตถุอื่น"
+
+msgid "Save As..."
+msgstr "บันทึกเป็น..."
 
 msgid "Show in FileSystem"
 msgstr "แสดงในรูปแบบไฟล์"
@@ -3092,9 +3088,6 @@ msgstr "โหลดรีซอร์สที่มีอยู่แล้ว
 
 msgid "Save the currently edited resource."
 msgstr "บันทึกรีซอร์สที่กำลังปรับแต่ง"
-
-msgid "Save As..."
-msgstr "บันทึกเป็น..."
 
 msgid "Copy Resource"
 msgstr "คัดลอกรีซอร์ส"

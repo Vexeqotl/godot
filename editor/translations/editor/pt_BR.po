@@ -175,13 +175,14 @@
 # "wendeli alves (wilcoxjvkb)" <wilcoxjvkb@gmail.com>, 2023.
 # Fernando Crozetta <fernando@czetta.com>, 2023.
 # Sergio Antonio <sergio.antonio.pn@proton.me>, 2023.
+# Martonio Junior <jose.mart.junior@gmail.com>, 2023.
 msgid ""
 msgstr ""
 "Project-Id-Version: Godot Engine editor interface\n"
 "Report-Msgid-Bugs-To: https://github.com/godotengine/godot\n"
 "POT-Creation-Date: 2016-05-30\n"
-"PO-Revision-Date: 2023-11-06 00:35+0000\n"
-"Last-Translator: Elizandro Baldin <ejbaldin@gmail.com>\n"
+"PO-Revision-Date: 2023-11-21 15:04+0000\n"
+"Last-Translator: Martonio Junior <jose.mart.junior@gmail.com>\n"
 "Language-Team: Portuguese (Brazil) <https://hosted.weblate.org/projects/godot-"
 "engine/godot/pt_BR/>\n"
 "Language: pt_BR\n"
@@ -189,7 +190,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n > 1;\n"
-"X-Generator: Weblate 5.2-dev\n"
+"X-Generator: Weblate 5.2\n"
 
 msgid "Main Thread"
 msgstr "Thread principal"
@@ -2067,6 +2068,9 @@ msgstr "Patrocinadores Ouro"
 msgid "Silver Sponsors"
 msgstr "Patrocinadores Prata"
 
+msgid "Diamond Members"
+msgstr "Patrocinadores Diamante"
+
 msgid "Donors"
 msgstr "Doadores"
 
@@ -3464,17 +3468,6 @@ msgstr ""
 "Desativando o complemento em '%s' para evitar mais erros."
 
 msgid ""
-"Unable to load addon script from path: '%s' Base type is not EditorPlugin."
-msgstr ""
-"Não foi possível carregar o script complementar do caminho: '%s' Tipo base "
-"não é EditorPlugin."
-
-msgid "Unable to load addon script from path: '%s' Script is not in tool mode."
-msgstr ""
-"Não foi possível carregar o script complementar do caminho: '%s' Script não "
-"está em modo ferramenta."
-
-msgid ""
 "Scene '%s' was automatically imported, so it can't be modified.\n"
 "To make changes to it, a new inherited scene can be created."
 msgstr ""
@@ -4050,6 +4043,9 @@ msgstr "Tornar Único"
 
 msgid "Make Unique (Recursive)"
 msgstr "Tornar Único (Recursivo)"
+
+msgid "Save As..."
+msgstr "Salvar Como..."
 
 msgid "Show in FileSystem"
 msgstr "Mostrar em Arquivos"
@@ -5881,9 +5877,6 @@ msgstr "Carrega um recurso existente do disco e o edita."
 
 msgid "Save the currently edited resource."
 msgstr "Salva o recurso editado atualmente."
-
-msgid "Save As..."
-msgstr "Salvar Como..."
 
 msgid "Extra resource options."
 msgstr "Opções de recursos extras."

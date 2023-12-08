@@ -1940,17 +1940,6 @@ msgstr ""
 "Desactivando el addon en '%s' para prevenir nuevos errores."
 
 msgid ""
-"Unable to load addon script from path: '%s' Base type is not EditorPlugin."
-msgstr ""
-"No se pudo cargar el script de addon desde la ruta: El tipo base de '%s' no "
-"es EditorPlugin."
-
-msgid "Unable to load addon script from path: '%s' Script is not in tool mode."
-msgstr ""
-"No se pudo cargar el script de addon desde la ruta: El script '%s' no está en "
-"modo tool."
-
-msgid ""
 "Scene '%s' was automatically imported, so it can't be modified.\n"
 "To make changes to it, a new inherited scene can be created."
 msgstr ""
@@ -2365,6 +2354,9 @@ msgstr "Carga Rápida"
 
 msgid "Make Unique"
 msgstr "Convertir en Unico"
+
+msgid "Save As..."
+msgstr "Guardar Como..."
 
 msgid "Show in FileSystem"
 msgstr "Mostrar en Sistema de Archivos"
@@ -3223,9 +3215,6 @@ msgstr "Cargar un recurso existente desde disco y editarlo."
 
 msgid "Save the currently edited resource."
 msgstr "Guardar el recurso editado actualmente."
-
-msgid "Save As..."
-msgstr "Guardar Como..."
 
 msgid "Extra resource options."
 msgstr "Opciones de recursos extra."

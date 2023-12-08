@@ -1679,17 +1679,6 @@ msgstr ""
 "Добавката „%s“ ще бъде изключена, за да се предотвратят последващи проблеми."
 
 msgid ""
-"Unable to load addon script from path: '%s' Base type is not EditorPlugin."
-msgstr ""
-"Не може да се зареди добавката-скрипт от: „%s“. Базовият тип не е "
-"„EditorPlugin“."
-
-msgid "Unable to load addon script from path: '%s' Script is not in tool mode."
-msgstr ""
-"Не може да се зареди добавката-скрипт от: „%s“. Скриптът не е в режим на "
-"„инструмент“."
-
-msgid ""
 "Scene '%s' was automatically imported, so it can't be modified.\n"
 "To make changes to it, a new inherited scene can be created."
 msgstr ""
@@ -1921,6 +1910,9 @@ msgstr "Размер:"
 
 msgid "New Value:"
 msgstr "Нова стойност:"
+
+msgid "Save As..."
+msgstr "Запазване като..."
 
 msgid "Show in FileSystem"
 msgstr "Показване във файловата система"
@@ -2543,9 +2535,6 @@ msgstr "Поставяне на свойствата"
 
 msgid "Save the currently edited resource."
 msgstr "Запазване на текущо редактирания ресурс."
-
-msgid "Save As..."
-msgstr "Запазване като..."
 
 msgid "Extra resource options."
 msgstr "Допълнителни настройки на ресурса."
