@@ -64,6 +64,8 @@
 #include "scene/gui/label.h"
 #include "scene/gui/line_edit.h"
 #include "scene/gui/link_button.h"
+#include "scene/gui/list_item.h"
+#include "scene/gui/list_container.h"
 #include "scene/gui/margin_container.h"
 #include "scene/gui/menu_bar.h"
 #include "scene/gui/menu_button.h"
@@ -409,6 +411,7 @@ void register_scene_types() {
 	GDREGISTER_CLASS(LinkButton);
 	GDREGISTER_CLASS(Panel);
 	GDREGISTER_VIRTUAL_CLASS(Range);
+	GDREGISTER_CLASS(ListItem);
 
 	OS::get_singleton()->yield(); // may take time to init
 
@@ -435,6 +438,7 @@ void register_scene_types() {
 	GDREGISTER_CLASS(HFlowContainer);
 	GDREGISTER_CLASS(VFlowContainer);
 	GDREGISTER_CLASS(MarginContainer);
+	GDREGISTER_CLASS(ListContainer);
 
 	OS::get_singleton()->yield(); // may take time to init
 
