@@ -35,14 +35,14 @@
 #include "core/object/script_language.h"
 #include "core/os/keyboard.h"
 #include "core/version.h"
-#include "doc_data_compressed.gen.h"
+#include "editor/doc_data_compressed.gen.h"
 #include "editor/editor_node.h"
 #include "editor/editor_paths.h"
 #include "editor/editor_property_name_processor.h"
-#include "editor/editor_scale.h"
 #include "editor/editor_settings.h"
 #include "editor/editor_string_names.h"
 #include "editor/plugins/script_editor_plugin.h"
+#include "editor/themes/editor_scale.h"
 #include "scene/gui/line_edit.h"
 
 #define CONTRIBUTE_URL vformat("%s/contributing/documentation/updating_the_class_reference.html", VERSION_DOCS_URL)
@@ -812,35 +812,25 @@ void EditorHelp::_update_doc() {
 		class_desc->add_newline();
 	}
 
-	// Descendents
-	if (cd.is_script_doc || ClassDB::class_exists(cd.name)) {
-		bool found = false;
-		bool prev = false;
-
+	// Descendants
+	if ((cd.is_script_doc || ClassDB::class_exists(cd.name)) && doc->inheriting.has(cd.name)) {
 		_push_normal_font();
-		for (const KeyValue<String, DocData::ClassDoc> &E : doc->class_list) {
-			if (E.value.inherits == cd.name) {
-				if (!found) {
-					class_desc->push_color(theme_cache.title_color);
-					class_desc->add_text(TTR("Inherited by:") + " ");
-					found = true;
-				}
+		class_desc->push_color(theme_cache.title_color);
+		class_desc->add_text(TTR("Inherited by:") + " ");
 
-				if (prev) {
-					class_desc->add_text(" , ");
-				}
-				_add_type_icon(E.value.name, theme_cache.doc_font_size, "ArrowRight");
-				class_desc->add_text(non_breaking_space); // Otherwise icon borrows hyperlink from _add_type().
-				_add_type(E.value.name);
-				prev = true;
+		for (RBSet<String, NaturalNoCaseComparator>::Element *itr = doc->inheriting[cd.name].front(); itr; itr = itr->next()) {
+			if (itr->prev()) {
+				class_desc->add_text(" , ");
 			}
+
+			_add_type_icon(itr->get(), theme_cache.doc_font_size, "ArrowRight");
+			class_desc->add_text(non_breaking_space); // Otherwise icon borrows hyperlink from _add_type().
+			_add_type(itr->get());
 		}
 		_pop_normal_font();
 
-		if (found) {
-			class_desc->pop();
-			class_desc->add_newline();
-		}
+		class_desc->pop();
+		class_desc->add_newline();
 	}
 
 	// Note if deprecated.
@@ -1966,7 +1956,7 @@ void EditorHelp::_help_callback(const String &p_topic) {
 	}
 
 	if (class_desc->is_ready()) {
-		class_desc->call_deferred(SNAME("scroll_to_paragraph"), line);
+		callable_mp(class_desc, &RichTextLabel::scroll_to_paragraph).call_deferred(line);
 	} else {
 		scroll_to = line;
 	}
@@ -2360,6 +2350,7 @@ void EditorHelp::_add_text(const String &p_bbcode) {
 	_add_text_to_rt(p_bbcode, class_desc, this, edited_class);
 }
 
+int EditorHelp::doc_generation_count = 0;
 String EditorHelp::doc_version_hash;
 Thread EditorHelp::worker_thread;
 
@@ -2392,6 +2383,8 @@ void EditorHelp::_load_doc_thread(void *p_udata) {
 		// We have to go back to the main thread to start from scratch, bypassing any possibly existing cache.
 		callable_mp_static(&EditorHelp::generate_doc).bind(false).call_deferred();
 	}
+
+	OS::get_singleton()->benchmark_end_measure("EditorHelp", vformat("Generate Documentation (Run %d)", doc_generation_count));
 }
 
 void EditorHelp::_gen_doc_thread(void *p_udata) {
@@ -2417,6 +2410,8 @@ void EditorHelp::_gen_doc_thread(void *p_udata) {
 	if (err) {
 		ERR_PRINT("Cannot save editor help cache (" + get_cache_full_path() + ").");
 	}
+
+	OS::get_singleton()->benchmark_end_measure("EditorHelp", vformat("Generate Documentation (Run %d)", doc_generation_count));
 }
 
 void EditorHelp::_gen_extensions_docs() {
@@ -2424,7 +2419,8 @@ void EditorHelp::_gen_extensions_docs() {
 }
 
 void EditorHelp::generate_doc(bool p_use_cache) {
-	OS::get_singleton()->benchmark_begin_measure("EditorHelp::generate_doc");
+	doc_generation_count++;
+	OS::get_singleton()->benchmark_begin_measure("EditorHelp", vformat("Generate Documentation (Run %d)", doc_generation_count));
 
 	// In case not the first attempt.
 	_wait_for_thread();
@@ -2444,8 +2440,6 @@ void EditorHelp::generate_doc(bool p_use_cache) {
 		doc->generate();
 		worker_thread.start(_gen_doc_thread, nullptr);
 	}
-
-	OS::get_singleton()->benchmark_end_measure("EditorHelp::generate_doc");
 }
 
 void EditorHelp::_toggle_scripts_pressed() {
@@ -2863,10 +2857,10 @@ void EditorHelpTooltip::parse_tooltip(const String &p_text) {
 	PackedStringArray slices = p_text.split("|", true, 3);
 	ERR_FAIL_COND_MSG(slices.size() < 4, "Invalid tooltip formatting. The expect string should be formatted as 'type|class|property|args'.");
 
-	String type = slices[0];
-	String class_name = slices[1];
-	String property_name = slices[2];
-	String property_args = slices[3];
+	const String &type = slices[0];
+	const String &class_name = slices[1];
+	const String &property_name = slices[2];
+	const String &property_args = slices[3];
 
 	String title;
 	String description;
