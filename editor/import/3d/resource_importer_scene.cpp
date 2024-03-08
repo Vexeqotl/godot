@@ -122,6 +122,7 @@ void EditorSceneFormatImporter::_bind_methods() {
 void EditorScenePostImport::_bind_methods() {
 	GDVIRTUAL_BIND(_post_import, "scene")
 	ClassDB::bind_method(D_METHOD("get_source_file"), &EditorScenePostImport::get_source_file);
+	ClassDB::bind_method(D_METHOD("get_args"), &EditorScenePostImport::get_args);
 }
 
 Node *EditorScenePostImport::post_import(Node *p_scene) {
@@ -142,6 +143,14 @@ void EditorScenePostImport::init(const String &p_source_file) {
 }
 
 EditorScenePostImport::EditorScenePostImport() {
+}
+
+Array EditorScenePostImport::get_args() const {
+	return args;
+}
+
+void EditorScenePostImport::_set_args(const Array &p_args) {
+	args = p_args;
 }
 
 ///////////////////////////////////////////////////////
@@ -2357,6 +2366,7 @@ void ResourceImporterScene::get_import_options(const String &p_path, List<Import
 	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "animation/remove_immutable_tracks"), true));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "animation/import_rest_as_RESET"), false));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::STRING, "import_script/path", PROPERTY_HINT_FILE, script_ext_hint), ""));
+	r_options->push_back(ImportOption(PropertyInfo(Variant::ARRAY, "import_script/args"), Array()));
 
 	r_options->push_back(ImportOption(PropertyInfo(Variant::DICTIONARY, "_subresources", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR), Dictionary()));
 
@@ -3044,6 +3054,7 @@ Error ResourceImporterScene::import(const String &p_source_file, const String &p
 	progress.step(TTR("Running Custom Script..."), 2);
 
 	String post_import_script_path = p_options["import_script/path"];
+	Array post_import_script_args = p_options["import_script/args"];
 	Ref<EditorScenePostImport> post_import_script;
 
 	if (!post_import_script_path.is_empty()) {
@@ -3062,6 +3073,7 @@ Error ResourceImporterScene::import(const String &p_source_file, const String &p
 	}
 
 	if (post_import_script.is_valid()) {
+		post_import_script->_set_args(post_import_script_args);
 		post_import_script->init(p_source_file);
 		scene = post_import_script->post_import(scene);
 		if (!scene) {
