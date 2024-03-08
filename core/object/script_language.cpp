@@ -168,6 +168,18 @@ ScriptLanguage *ScriptServer::get_language(int p_idx) {
 	return _languages[p_idx];
 }
 
+ScriptLanguage *ScriptServer::get_language_for_extension(const String &p_extension) {
+	MutexLock lock(languages_mutex);
+
+	for (int i = 0; i < _language_count; i++) {
+		if (_languages[i] && _languages[i]->get_extension() == p_extension) {
+			return _languages[i];
+		}
+	}
+
+	return nullptr;
+}
+
 Error ScriptServer::register_language(ScriptLanguage *p_language) {
 	MutexLock lock(languages_mutex);
 	ERR_FAIL_NULL_V(p_language, ERR_INVALID_PARAMETER);
@@ -523,6 +535,13 @@ TypedArray<int> ScriptLanguage::CodeCompletionOption::get_option_cached_characte
 	return charac;
 }
 
+void ScriptLanguage::_bind_methods() {
+	BIND_ENUM_CONSTANT(SCRIPT_NAME_CASING_AUTO);
+	BIND_ENUM_CONSTANT(SCRIPT_NAME_CASING_PASCAL_CASE);
+	BIND_ENUM_CONSTANT(SCRIPT_NAME_CASING_SNAKE_CASE);
+	BIND_ENUM_CONSTANT(SCRIPT_NAME_CASING_KEBAB_CASE);
+}
+
 bool PlaceHolderScriptInstance::set(const StringName &p_name, const Variant &p_value) {
 	if (script->is_placeholder_fallback_enabled()) {
 		return false;
@@ -696,7 +715,12 @@ void PlaceHolderScriptInstance::property_set_fallback(const StringName &p_name, 
 			}
 		}
 		if (!found) {
-			properties.push_back(PropertyInfo(p_value.get_type(), p_name, PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR | PROPERTY_USAGE_SCRIPT_VARIABLE));
+			PropertyHint hint = PROPERTY_HINT_NONE;
+			const Object *obj = p_value.get_validated_object();
+			if (obj && obj->is_class("Node")) {
+				hint = PROPERTY_HINT_NODE_TYPE;
+			}
+			properties.push_back(PropertyInfo(p_value.get_type(), p_name, hint, "", PROPERTY_USAGE_NO_EDITOR | PROPERTY_USAGE_SCRIPT_VARIABLE));
 		}
 	}
 
