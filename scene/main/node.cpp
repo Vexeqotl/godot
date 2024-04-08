@@ -236,15 +236,14 @@ void Node::_notification(int p_notification) {
 			}
 		} break;
 
-<<<<<<< HEAD
 		case NOTIFICATION_SCENE_INSTANTIATED: {
 			GDVIRTUAL_CALL(_scene_instantiated);			
-=======
+		} break;
+
 		case NOTIFICATION_TRANSLATION_CHANGED: {
 			if (data.inside_tree) {
 				data.is_auto_translate_dirty = true;
 			}
->>>>>>> upstream/master
 		} break;
 	}
 }
