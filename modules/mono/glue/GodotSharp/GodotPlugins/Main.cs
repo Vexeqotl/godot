@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Loader;
+using Godot;
 using Godot.Bridge;
 using Godot.NativeInterop;
 
@@ -61,6 +63,19 @@ namespace GodotPlugins
                 var reference = new WeakReference(context, trackResurrection: true);
                 var wrapper = new PluginLoadContextWrapper(context, reference);
                 var assembly = context.LoadFromAssemblyName(assemblyName);
+
+                var assemblyHasExtensionAttr = assembly.GetCustomAttributes(inherit: false)
+                    .OfType<AssemblyHasExtensionAttribute>()
+                    .FirstOrDefault();
+
+                if (assemblyHasExtensionAttr != null)
+                {
+                    foreach (var extensionAssemblyName in assemblyHasExtensionAttr.AssemblyNames)
+                    {
+                        context.LoadFromAssemblyName(new AssemblyName(extensionAssemblyName));
+                    }
+                }
+
                 return (assembly, wrapper);
             }
 
@@ -150,6 +165,25 @@ namespace GodotPlugins
 
                 string loadedAssemblyPath = _projectLoadContext.AssemblyLoadedPath ?? assemblyPath;
                 *outLoadedAssemblyPath = Marshaling.ConvertStringToNative(loadedAssemblyPath);
+
+                var assemblyHasExtensionAttr = projectAssembly.GetCustomAttributes(inherit: false)
+                    .OfType<AssemblyHasExtensionAttribute>()
+                    .FirstOrDefault();
+
+                if (assemblyHasExtensionAttr != null)
+                {
+                    Assembly? GetAssemblyByName(string name) => AppDomain.CurrentDomain.GetAssemblies().
+                               SingleOrDefault(assembly => assembly.GetName().Name == name);
+
+                    foreach (var extensionAssemblyName in assemblyHasExtensionAttr.AssemblyNames)
+					{
+                        var referencedAssembly = GetAssemblyByName(extensionAssemblyName);
+                        if (referencedAssembly != null)
+                        {
+                            ScriptManagerBridge.LookupScriptsInAssembly(referencedAssembly);
+                        }
+                    }
+                }
 
                 ScriptManagerBridge.LookupScriptsInAssembly(projectAssembly);
 
@@ -246,7 +280,7 @@ namespace GodotPlugins
 
                 pluginLoadContext.Unload();
 
-                int startTimeMs = Environment.TickCount;
+                int startTimeMs = System.Environment.TickCount;
                 bool takingTooLong = false;
 
                 while (pluginLoadContext.IsAlive)
@@ -257,7 +291,7 @@ namespace GodotPlugins
                     if (!pluginLoadContext.IsAlive)
                         break;
 
-                    int elapsedTimeMs = Environment.TickCount - startTimeMs;
+                    int elapsedTimeMs = System.Environment.TickCount - startTimeMs;
 
                     if (!takingTooLong && elapsedTimeMs >= 200)
                     {
