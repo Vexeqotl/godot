@@ -59,21 +59,27 @@ using namespace godot;
 // Thirdparty headers.
 
 #ifdef MODULE_MSDFGEN_ENABLED
+#ifdef _MSC_VER
+#pragma warning(disable : 4458)
+#endif
 #include <core/ShapeDistanceFinder.h>
 #include <core/contour-combiners.h>
 #include <core/edge-selectors.h>
 #include <msdfgen.h>
+#ifdef _MSC_VER
+#pragma warning(default : 4458)
+#endif
 #endif
 
-#ifdef MODULE_SVG_ENABLED
 #ifdef MODULE_FREETYPE_ENABLED
+#include FT_SFNT_NAMES_H
+#include FT_TRUETYPE_IDS_H
+#ifdef MODULE_SVG_ENABLED
 #include "thorvg_svg_in_ot.h"
 #endif
 #endif
 
 /*************************************************************************/
-
-#define OT_TAG(c1, c2, c3, c4) ((int32_t)((((uint32_t)(c1) & 0xff) << 24) | (((uint32_t)(c2) & 0xff) << 16) | (((uint32_t)(c3) & 0xff) << 8) | ((uint32_t)(c4) & 0xff)))
 
 bool TextServerFallback::_has_feature(Feature p_feature) const {
 	switch (p_feature) {
@@ -636,7 +642,7 @@ _FORCE_INLINE_ bool TextServerFallback::_ensure_glyph(FontFallback *p_font_data,
 		if (p_font_data->force_autohinter) {
 			flags |= FT_LOAD_FORCE_AUTOHINT;
 		}
-		if (outline) {
+		if (outline || (p_font_data->disable_embedded_bitmaps && !FT_HAS_COLOR(fd->face))) {
 			flags |= FT_LOAD_NO_BITMAP;
 		} else if (FT_HAS_COLOR(fd->face)) {
 			flags |= FT_LOAD_COLOR;
@@ -665,7 +671,7 @@ _FORCE_INLINE_ bool TextServerFallback::_ensure_glyph(FontFallback *p_font_data,
 		}
 
 		if (p_font_data->embolden != 0.f) {
-			FT_Pos strength = p_font_data->embolden * p_size.x * 4; // 26.6 fractional units (1 / 64).
+			FT_Pos strength = p_font_data->embolden * p_size.x * fd->oversampling * 4; // 26.6 fractional units (1 / 64).
 			FT_Outline_Embolden(&fd->face->glyph->outline, strength);
 		}
 
@@ -853,8 +859,37 @@ _FORCE_INLINE_ bool TextServerFallback::_ensure_cache_for_size(FontFallback *p_f
 		fd->underline_thickness = (FT_MulFix(fd->face->underline_thickness, fd->face->size->metrics.y_scale) / 64.0) / fd->oversampling * fd->scale;
 
 		if (!p_font_data->face_init) {
-			// Get style flags and name.
-			if (fd->face->family_name != nullptr) {
+			// When a font does not provide a `family_name`, FreeType tries to synthesize one based on other names.
+			// FreeType automatically converts non-ASCII characters to "?" in the synthesized name.
+			// To avoid that behavior, use the format-specific name directly if available.
+			if (FT_IS_SFNT(fd->face)) {
+				int name_count = FT_Get_Sfnt_Name_Count(fd->face);
+				for (int i = 0; i < name_count; i++) {
+					FT_SfntName sfnt_name;
+					if (FT_Get_Sfnt_Name(fd->face, i, &sfnt_name) != 0) {
+						continue;
+					}
+					if (sfnt_name.name_id != TT_NAME_ID_FONT_FAMILY && sfnt_name.name_id != TT_NAME_ID_TYPOGRAPHIC_FAMILY) {
+						continue;
+					}
+					if (!p_font_data->font_name.is_empty() && sfnt_name.language_id != TT_MS_LANGID_ENGLISH_UNITED_STATES) {
+						continue;
+					}
+
+					switch (sfnt_name.platform_id) {
+						case TT_PLATFORM_APPLE_UNICODE: {
+							p_font_data->font_name.parse_utf16((const char16_t *)sfnt_name.string, sfnt_name.string_len / 2, false);
+						} break;
+
+						case TT_PLATFORM_MICROSOFT: {
+							if (sfnt_name.encoding_id == TT_MS_ID_UNICODE_CS || sfnt_name.encoding_id == TT_MS_ID_UCS_4) {
+								p_font_data->font_name.parse_utf16((const char16_t *)sfnt_name.string, sfnt_name.string_len / 2, false);
+							}
+						} break;
+					}
+				}
+			}
+			if (p_font_data->font_name.is_empty() && fd->face->family_name != nullptr) {
 				p_font_data->font_name = String::utf8((const char *)fd->face->family_name);
 			}
 			if (fd->face->style_name != nullptr) {
@@ -907,8 +942,8 @@ _FORCE_INLINE_ bool TextServerFallback::_ensure_cache_for_size(FontFallback *p_f
 					coords.write[i] = CLAMP(var_value * 65536.0, amaster->axis[i].minimum, amaster->axis[i].maximum);
 				}
 
-				if (p_font_data->variation_coordinates.has(_tag_to_name(var_tag))) {
-					var_value = p_font_data->variation_coordinates[_tag_to_name(var_tag)];
+				if (p_font_data->variation_coordinates.has(tag_to_name(var_tag))) {
+					var_value = p_font_data->variation_coordinates[tag_to_name(var_tag)];
 					coords.write[i] = CLAMP(var_value * 65536.0, amaster->axis[i].minimum, amaster->axis[i].maximum);
 				}
 			}
@@ -1168,6 +1203,25 @@ TextServer::FontAntialiasing TextServerFallback::_font_get_antialiasing(const RI
 
 	MutexLock lock(fd->mutex);
 	return fd->antialiasing;
+}
+
+void TextServerFallback::_font_set_disable_embedded_bitmaps(const RID &p_font_rid, bool p_disable_embedded_bitmaps) {
+	FontFallback *fd = _get_font_data(p_font_rid);
+	ERR_FAIL_NULL(fd);
+
+	MutexLock lock(fd->mutex);
+	if (fd->disable_embedded_bitmaps != p_disable_embedded_bitmaps) {
+		_font_clear_cache(fd);
+		fd->disable_embedded_bitmaps = p_disable_embedded_bitmaps;
+	}
+}
+
+bool TextServerFallback::_font_get_disable_embedded_bitmaps(const RID &p_font_rid) const {
+	FontFallback *fd = _get_font_data(p_font_rid);
+	ERR_FAIL_NULL_V(fd, false);
+
+	MutexLock lock(fd->mutex);
+	return fd->disable_embedded_bitmaps;
 }
 
 void TextServerFallback::_font_set_generate_mipmaps(const RID &p_font_rid, bool p_generate_mipmaps) {
@@ -2874,7 +2928,7 @@ void TextServerFallback::full_copy(ShapedTextDataFallback *p_shaped) {
 	ShapedTextDataFallback *parent = shaped_owner.get_or_null(p_shaped->parent);
 
 	for (const KeyValue<Variant, ShapedTextDataFallback::EmbeddedObject> &E : parent->objects) {
-		if (E.value.pos >= p_shaped->start && E.value.pos < p_shaped->end) {
+		if (E.value.start >= p_shaped->start && E.value.start < p_shaped->end) {
 			p_shaped->objects[E.key] = E.value;
 		}
 	}
@@ -3170,7 +3224,8 @@ bool TextServerFallback::_shaped_text_add_object(const RID &p_shaped, const Vari
 	ShapedTextDataFallback::EmbeddedObject obj;
 	obj.inline_align = p_inline_align;
 	obj.rect.size = p_size;
-	obj.pos = span.start;
+	obj.start = span.start;
+	obj.end = span.end;
 	obj.baseline = p_baseline;
 
 	sd->spans.push_back(span);
@@ -3205,7 +3260,7 @@ bool TextServerFallback::_shaped_text_resize_object(const RID &p_shaped, const V
 			Variant key;
 			if (gl.count == 1) {
 				for (const KeyValue<Variant, ShapedTextDataFallback::EmbeddedObject> &E : sd->objects) {
-					if (E.value.pos == gl.start) {
+					if (E.value.start == gl.start) {
 						key = E.key;
 						break;
 					}
@@ -3254,7 +3309,7 @@ void TextServerFallback::_realign(ShapedTextDataFallback *p_sd) const {
 	double full_ascent = p_sd->ascent;
 	double full_descent = p_sd->descent;
 	for (KeyValue<Variant, ShapedTextDataFallback::EmbeddedObject> &E : p_sd->objects) {
-		if ((E.value.pos >= p_sd->start) && (E.value.pos < p_sd->end)) {
+		if ((E.value.start >= p_sd->start) && (E.value.start < p_sd->end)) {
 			if (p_sd->orientation == ORIENTATION_HORIZONTAL) {
 				switch (E.value.inline_align & INLINE_ALIGNMENT_TEXT_MASK) {
 					case INLINE_ALIGNMENT_TO_TOP: {
@@ -3375,7 +3430,7 @@ RID TextServerFallback::_shaped_text_substr(const RID &p_shaped, int64_t p_start
 				bool find_embedded = false;
 				if (gl.count == 1) {
 					for (const KeyValue<Variant, ShapedTextDataFallback::EmbeddedObject> &E : sd->objects) {
-						if (E.value.pos == gl.start) {
+						if (E.value.start == gl.start) {
 							find_embedded = true;
 							key = E.key;
 							new_sd->objects[key] = E.value;
@@ -3684,9 +3739,9 @@ RID TextServerFallback::_find_sys_font_for_text(const RID &p_fdef, const String 
 		int font_weight = _font_get_weight(p_fdef);
 		int font_stretch = _font_get_stretch(p_fdef);
 		Dictionary dvar = _font_get_variation_coordinates(p_fdef);
-		static int64_t wgth_tag = _name_to_tag("weight");
-		static int64_t wdth_tag = _name_to_tag("width");
-		static int64_t ital_tag = _name_to_tag("italic");
+		static int64_t wgth_tag = name_to_tag("weight");
+		static int64_t wdth_tag = name_to_tag("width");
+		static int64_t ital_tag = name_to_tag("italic");
 		if (dvar.has(wgth_tag)) {
 			font_weight = dvar[wgth_tag].operator int();
 		}
@@ -3805,6 +3860,7 @@ RID TextServerFallback::_find_sys_font_for_text(const RID &p_fdef, const String 
 				}
 
 				_font_set_antialiasing(sysf.rid, key.antialiasing);
+				_font_set_disable_embedded_bitmaps(sysf.rid, key.disable_embedded_bitmaps);
 				_font_set_generate_mipmaps(sysf.rid, key.mipmaps);
 				_font_set_multichannel_signed_distance_field(sysf.rid, key.msdf);
 				_font_set_msdf_pixel_range(sysf.rid, key.msdf_range);
@@ -4288,6 +4344,32 @@ Rect2 TextServerFallback::_shaped_text_get_object_rect(const RID &p_shaped, cons
 	return sd->objects[p_key].rect;
 }
 
+Vector2i TextServerFallback::_shaped_text_get_object_range(const RID &p_shaped, const Variant &p_key) const {
+	const ShapedTextDataFallback *sd = shaped_owner.get_or_null(p_shaped);
+	ERR_FAIL_NULL_V(sd, Vector2i());
+
+	MutexLock lock(sd->mutex);
+	ERR_FAIL_COND_V(!sd->objects.has(p_key), Vector2i());
+	return Vector2i(sd->objects[p_key].start, sd->objects[p_key].end);
+}
+
+int64_t TextServerFallback::_shaped_text_get_object_glyph(const RID &p_shaped, const Variant &p_key) const {
+	const ShapedTextDataFallback *sd = shaped_owner.get_or_null(p_shaped);
+	ERR_FAIL_NULL_V(sd, -1);
+
+	MutexLock lock(sd->mutex);
+	ERR_FAIL_COND_V(!sd->objects.has(p_key), -1);
+	const ShapedTextDataFallback::EmbeddedObject &obj = sd->objects[p_key];
+	int sd_size = sd->glyphs.size();
+	const Glyph *sd_glyphs = sd->glyphs.ptr();
+	for (int i = 0; i < sd_size; i++) {
+		if (obj.start == sd_glyphs[i].start) {
+			return i;
+		}
+	}
+	return -1;
+}
+
 Size2 TextServerFallback::_shaped_text_get_size(const RID &p_shaped) const {
 	const ShapedTextDataFallback *sd = shaped_owner.get_or_null(p_shaped);
 	ERR_FAIL_NULL_V(sd, Size2());
@@ -4386,6 +4468,10 @@ String TextServerFallback::_string_to_upper(const String &p_string, const String
 
 String TextServerFallback::_string_to_lower(const String &p_string, const String &p_language) const {
 	return p_string.to_lower();
+}
+
+String TextServerFallback::_string_to_title(const String &p_string, const String &p_language) const {
+	return p_string.capitalize();
 }
 
 PackedInt32Array TextServerFallback::_string_get_word_breaks(const String &p_string, const String &p_language, int64_t p_chars_per_line) const {

@@ -87,7 +87,7 @@ Files extracted from upstream source:
 ## certs
 
 - Upstream: Mozilla, via https://github.com/bagder/ca-bundle
-- Version: git (bef37a977ccb45fb4c1b213b79dd6ba438077561, 2023)
+- Version: git (c5a419971b1bec220368c619aaafd0b818aa119f, 2024)
 - License: MPL 2.0
 
 
@@ -172,13 +172,15 @@ Files extracted from upstream source:
 ## embree
 
 - Upstream: https://github.com/embree/embree
-- Version: 3.13.5 (698442324ccddd11725fb8875275dc1384f7fb40, 2022)
+- Version: 4.3.1 (daa8de0e714e18ad5e5c9841b67c1950d9c91c51, 2024)
 - License: Apache 2.0
 
 Files extracted from upstream:
 
 - All `.cpp` files listed in `modules/raycast/godot_update_embree.py`
 - All header files in the directories listed in `modules/raycast/godot_update_embree.py`
+- All config files listed in `modules/raycast/godot_update_embree.py`
+- `LICENSE.txt`
 
 The `modules/raycast/godot_update_embree.py` script can be used to pull the
 relevant files from the latest Embree release and apply some automatic changes.
@@ -192,7 +194,7 @@ commits.
 ## enet
 
 - Upstream: https://github.com/lsalzman/enet
-- Version: git (ea4607a90dbfbcf4da2669ea998585253d8e70b1, 2023)
+- Version: git (c44b7d0f7ff21edb702745e4c019d0537928c373, 2024)
 - License: MIT
 
 Files extracted from upstream source:
@@ -375,7 +377,7 @@ Files extracted from upstream source:
 ## harfbuzz
 
 - Upstream: https://github.com/harfbuzz/harfbuzz
-- Version: 8.2.2 (18a6e78549e8e04a281129ea8ca784ce85f111b8, 2023)
+- Version: 8.3.0 (894a1f72ee93a1fd8dc1d9218cb3fd8f048be29a, 2023)
 - License: MIT
 
 Files extracted from upstream source:
@@ -383,13 +385,14 @@ Files extracted from upstream source:
 - `AUTHORS`, `COPYING`, `THANKS`
 - From the `src` folder, recursively:
   - All the `.c`, `.cc`, `.h`, `.hh` files
-  - Except `main.cc`, `harfbuzz*.cc`, `failing-alloc.c`, `test*.cc`, `hb-wasm*.*`
+  - Except `main.cc`, `harfbuzz*.cc`, `failing-alloc.c`, `test*.cc`, `hb-wasm*.*`,
+    and the `wasm` folder
 
 
 ## icu4c
 
 - Upstream: https://github.com/unicode-org/icu
-- Version: 74.1 (9edac7b78327a1cb58db29e2714b15f9fa14e4d7, 2023)
+- Version: 74.2 (2d029329c82c7792b985024b2bdab5fc7278fbc8, 2023)
 - License: Unicode
 
 Files extracted from upstream source:
@@ -462,12 +465,12 @@ Files extracted from upstream source:
 ## libpng
 
 - Upstream: http://libpng.org/pub/png/libpng.html
-- Version: 1.6.40 (f135775ad4e5d4408d2e12ffcc71bb36e6b48551, 2023)
+- Version: 1.6.43 (ed217e3e601d8e462f7fd1e04bed43ac42212429, 2024)
 - License: libpng/zlib
 
 Files extracted from upstream source:
 
-- All `.c` and `.h` files of the main directory, except from `example.c` and
+- All `.c` and `.h` files of the main directory, apart from `example.c` and
   `pngtest.c`
 - `arm/`, `intel/` and `powerpc/` folders
 - `scripts/pnglibconf.h.prebuilt` as `pnglibconf.h`
@@ -539,7 +542,7 @@ File extracted from upstream release tarball:
 ## meshoptimizer
 
 - Upstream: https://github.com/zeux/meshoptimizer
-- Version: git (c21d3be6ddf627f8ca852ba4b6db9903b0557858, 2023)
+- Version: 0.20 (c21d3be6ddf627f8ca852ba4b6db9903b0557858, 2023)
 - License: MIT
 
 Files extracted from upstream repository:
@@ -689,7 +692,7 @@ Collection of single-file libraries used in Godot components.
 ## msdfgen
 
 - Upstream: https://github.com/Chlumsky/msdfgen
-- Version: 1.10 (64a91eec3ca3787e6f78b4c99fcd3052ad3e37c0, 2021)
+- Version: 1.11 (f12d7ca00091a632a289865b85c3f2e0bfc6542d, 2023)
 - License: MIT
 
 Files extracted from the upstream source:
@@ -755,7 +758,7 @@ Exclude:
 ## pcre2
 
 - Upstream: http://www.pcre.org
-- Version: 10.42 (52c08847921a324c804cabf2814549f50bce1265, 2022)
+- Version: 10.43 (3864abdb713f78831dd12d898ab31bbb0fa630b6, 2024)
 - License: BSD-3-Clause
 
 Files extracted from upstream source:
@@ -764,11 +767,9 @@ Files extracted from upstream source:
 - All `.h` files in `src/` apart from `pcre2posix.h`
 - `src/pcre2_jit_match.c`
 - `src/pcre2_jit_misc.c`
+- `src/pcre2_ucptables.c`
 - `src/sljit/`
 - `AUTHORS` and `LICENCE`
-
-A sljit patch from upstream was backported to fix macOS < 11.0 compilation
-in 10.40, it can be found in the `patches` folder.
 
 
 ## recastnavigation
@@ -837,11 +838,13 @@ folder.
 
 Files extracted from upstream source:
 
+- `LICENSE.txt`
 - All `.cpp`, `.h` and `.inl` files
 
-Important: Some files have Godot-made changes.
-They are marked with `// -- GODOT start --` and `// -- GODOT end --`
-comments and a patch is provided in the squish/ folder.
+Some downstream changes have been made and are identified by
+`// -- GODOT begin --` and `// -- GODOT end --` comments.
+They can be reapplied using the patches included in the `patches`
+folder.
 
 
 ## tinyexr
@@ -861,13 +864,13 @@ instead of `miniz.h` as an external dependency.
 ## thorvg
 
 - Upstream: https://github.com/thorvg/thorvg
-- Version: 0.12.5 (9c8eeaab9629b5d241b1092a3398fe6351c259cd, 2024)
+- Version: 0.12.9 (afa6d8499bd49141d99d5e40a4620bd9f6bc0467, 2024)
 - License: MIT
 
 Files extracted from upstream source:
 
 See `thorvg/update-thorvg.sh` for extraction instructions. Set the version
-number and run the script and apply patches from the `patches` folder.
+number and run the script.
 
 
 ## ufbx

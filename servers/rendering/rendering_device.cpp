@@ -5089,7 +5089,8 @@ Error RenderingDevice::initialize(RenderingContextDriver *p_context, DisplayServ
 	draw_list = nullptr;
 	compute_list = nullptr;
 
-	if (main_instance) {
+	bool project_pipeline_cache_enable = GLOBAL_GET("rendering/rendering_device/pipeline_cache/enable");
+	if (main_instance && project_pipeline_cache_enable) {
 		// Only the instance that is not a local device and is also the singleton is allowed to manage a pipeline cache.
 		pipeline_cache_file_path = vformat("user://vulkan/pipelines.%s.%s",
 				OS::get_singleton()->get_current_rendering_method(),
@@ -5182,7 +5183,7 @@ void RenderingDevice::_save_pipeline_cache(void *p_data) {
 	}
 }
 
-template <class T>
+template <typename T>
 void RenderingDevice::_free_rids(T &p_owner, const char *p_type) {
 	List<RID> owned;
 	p_owner.get_owned_list(&owned);

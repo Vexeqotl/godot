@@ -214,6 +214,7 @@ Error Resource::copy_from(const Ref<Resource> &p_resource) {
 	}
 	return OK;
 }
+
 void Resource::reload_from_file() {
 	String path = get_path();
 	if (!path.is_resource_file()) {
@@ -423,8 +424,7 @@ RID Resource::get_rid() const {
 		}
 	}
 	if (_get_extension() && _get_extension()->get_rid) {
-		RID ret;
-		ret.from_uint64(_get_extension()->get_rid(_get_extension_instance()));
+		RID ret = RID::from_uint64(_get_extension()->get_rid(_get_extension_instance()));
 		if (ret.is_valid()) {
 			return ret;
 		}
@@ -435,7 +435,7 @@ RID Resource::get_rid() const {
 
 #ifdef TOOLS_ENABLED
 
-uint32_t Resource::hash_edited_version() const {
+uint32_t Resource::hash_edited_version_for_preview() const {
 	uint32_t hash = hash_murmur3_one_32(get_edited_version());
 
 	List<PropertyInfo> plist;
@@ -445,7 +445,7 @@ uint32_t Resource::hash_edited_version() const {
 		if (E.usage & PROPERTY_USAGE_STORAGE && E.type == Variant::OBJECT && E.hint == PROPERTY_HINT_RESOURCE_TYPE) {
 			Ref<Resource> res = get(E.name);
 			if (res.is_valid()) {
-				hash = hash_murmur3_one_32(res->hash_edited_version(), hash);
+				hash = hash_murmur3_one_32(res->hash_edited_version_for_preview(), hash);
 			}
 		}
 	}

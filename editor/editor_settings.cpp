@@ -417,6 +417,7 @@ void EditorSettings::_load_defaults(Ref<ConfigFile> p_extra_config) {
 	set_restart_if_changed("interface/editor/debug/enable_pseudolocalization", true);
 	// Use pseudolocalization in editor.
 	EDITOR_SETTING_USAGE(Variant::BOOL, PROPERTY_HINT_NONE, "interface/editor/use_embedded_menu", false, "", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED)
+	EDITOR_SETTING_USAGE(Variant::BOOL, PROPERTY_HINT_NONE, "interface/editor/use_native_file_dialogs", false, "", PROPERTY_USAGE_DEFAULT)
 	EDITOR_SETTING_USAGE(Variant::BOOL, PROPERTY_HINT_NONE, "interface/editor/expand_to_title", true, "", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED)
 
 	EDITOR_SETTING(Variant::INT, PROPERTY_HINT_RANGE, "interface/editor/main_font_size", 14, "8,48,1")
@@ -626,6 +627,7 @@ void EditorSettings::_load_defaults(Ref<ConfigFile> p_extra_config) {
 	EDITOR_SETTING(Variant::INT, PROPERTY_HINT_RANGE, "text_editor/behavior/navigation/v_scroll_speed", 80, "1,10000,1")
 	_initial_set("text_editor/behavior/navigation/drag_and_drop_selection", true);
 	_initial_set("text_editor/behavior/navigation/stay_in_script_editor_on_node_selected", true);
+	_initial_set("text_editor/behavior/navigation/open_script_when_connecting_signal_to_existing_method", true);
 
 	// Behavior: Indent
 	EDITOR_SETTING(Variant::INT, PROPERTY_HINT_ENUM, "text_editor/behavior/indent/type", 0, "Tabs,Spaces")
@@ -652,6 +654,8 @@ void EditorSettings::_load_defaults(Ref<ConfigFile> p_extra_config) {
 	_initial_set("text_editor/completion/put_callhint_tooltip_below_current_line", true);
 	_initial_set("text_editor/completion/complete_file_paths", true);
 	_initial_set("text_editor/completion/add_type_hints", true);
+	_initial_set("text_editor/completion/add_string_name_literals", false);
+	_initial_set("text_editor/completion/add_node_path_literals", false);
 	_initial_set("text_editor/completion/use_single_quotes", false);
 	_initial_set("text_editor/completion/colorize_suggestions", true);
 
@@ -752,6 +756,7 @@ void EditorSettings::_load_defaults(Ref<ConfigFile> p_extra_config) {
 
 	// Tiles editor
 	_initial_set("editors/tiles_editor/display_grid", true);
+	_initial_set("editors/tiles_editor/highlight_selected_layer", true);
 	_initial_set("editors/tiles_editor/grid_color", Color(1.0, 0.5, 0.2, 0.5));
 
 	// Polygon editor
@@ -838,6 +843,7 @@ void EditorSettings::_load_defaults(Ref<ConfigFile> p_extra_config) {
 
 	// TRANSLATORS: Project Manager here refers to the tool used to create/manage Godot projects.
 	EDITOR_SETTING(Variant::INT, PROPERTY_HINT_ENUM, "project_manager/sorting_order", 0, "Last Edited,Name,Path")
+	EDITOR_SETTING(Variant::INT, PROPERTY_HINT_ENUM, "project_manager/directory_naming_convention", 1, "No convention,kebab-case,snake_case,camelCase,PascalCase,Title Case")
 
 #if defined(WEB_ENABLED)
 	// Web platform only supports `gl_compatibility`.
