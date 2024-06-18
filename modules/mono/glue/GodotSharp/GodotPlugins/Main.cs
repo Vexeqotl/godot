@@ -64,15 +64,17 @@ namespace GodotPlugins
                 var wrapper = new PluginLoadContextWrapper(context, reference);
                 var assembly = context.LoadFromAssemblyName(assemblyName);
 
-                var assemblyHasExtensionAttr = assembly.GetCustomAttributes(inherit: false)
-                    .OfType<AssemblyHasExtensionAttribute>()
-                    .FirstOrDefault();
-
-                if (assemblyHasExtensionAttr != null)
+                var assemblyDependencies = ReadProjectAssemblyDependencyDlls();
+                foreach (var extensionAssemblyName in assemblyDependencies)
                 {
-                    foreach (var extensionAssemblyName in assemblyHasExtensionAttr.AssemblyNames)
+                    try
                     {
                         context.LoadFromAssemblyName(new AssemblyName(extensionAssemblyName));
+                        GD.Print($"Successfully loaded assembly dependency: {extensionAssemblyName}");
+                    }
+                    catch (Exception ex)
+                    {
+                        GD.PrintErr($"Failed to load assembly dependency '{extensionAssemblyName}' with error: {ex.Message}");
                     }
                 }
 
@@ -166,22 +168,21 @@ namespace GodotPlugins
                 string loadedAssemblyPath = _projectLoadContext.AssemblyLoadedPath ?? assemblyPath;
                 *outLoadedAssemblyPath = Marshaling.ConvertStringToNative(loadedAssemblyPath);
 
-                var assemblyHasExtensionAttr = projectAssembly.GetCustomAttributes(inherit: false)
-                    .OfType<AssemblyHasExtensionAttribute>()
-                    .FirstOrDefault();
-
-                if (assemblyHasExtensionAttr != null)
-                {
-                    Assembly? GetAssemblyByName(string name) => AppDomain.CurrentDomain.GetAssemblies().
+                var assemblyDependencies = ReadProjectAssemblyDependencyDlls();
+                Assembly? GetAssemblyByName(string name) => AppDomain.CurrentDomain.GetAssemblies().
                                SingleOrDefault(assembly => assembly.GetName().Name == name);
 
-                    foreach (var extensionAssemblyName in assemblyHasExtensionAttr.AssemblyNames)
-					{
-                        var referencedAssembly = GetAssemblyByName(extensionAssemblyName);
-                        if (referencedAssembly != null)
-                        {
-                            ScriptManagerBridge.LookupScriptsInAssembly(referencedAssembly);
-                        }
+                foreach (var extensionAssemblyName in assemblyDependencies)
+                {
+                    var referencedAssembly = GetAssemblyByName(extensionAssemblyName);
+                    if (referencedAssembly != null)
+                    {
+                        ScriptManagerBridge.LookupScriptsInAssembly(referencedAssembly);
+                        GD.Print($"Script lookup successful in assembly dependency: {extensionAssemblyName}");
+                    }
+                    else
+                    {
+                        GD.PrintErr($"Failed to locate assembly dependency: {extensionAssemblyName}");
                     }
                 }
 
@@ -321,6 +322,12 @@ namespace GodotPlugins
                 Console.Error.WriteLine(e);
                 return false;
             }
+        }
+
+        private static Godot.Collections.Array<string> ReadProjectAssemblyDependencyDlls()
+        {
+            return ProjectSettings.GetSetting("dotnet/project/editor_dependencies",
+                new Godot.Collections.Array<string>()).As<Godot.Collections.Array<string>>();
         }
     }
 }
