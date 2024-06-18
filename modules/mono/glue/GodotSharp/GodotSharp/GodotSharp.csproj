@@ -48,7 +48,6 @@
   <!-- Sources -->
   <ItemGroup>
     <Compile Include="Core\Aabb.cs" />
-    <Compile Include="Core\Attributes\AssemblyHasExtensionAttribute.cs" />
     <Compile Include="Core\Bridge\GodotSerializationInfo.cs" />
     <Compile Include="Core\Bridge\MethodInfo.cs" />
     <Compile Include="Core\Callable.generics.cs" />
