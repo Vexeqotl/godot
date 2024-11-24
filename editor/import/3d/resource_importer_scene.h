@@ -88,6 +88,7 @@ class EditorScenePostImport : public RefCounted {
 	GDCLASS(EditorScenePostImport, RefCounted);
 
 	String source_file;
+	Array args;
 
 protected:
 	static void _bind_methods();
@@ -99,6 +100,9 @@ public:
 	virtual Node *post_import(Node *p_scene);
 	virtual void init(const String &p_source_file);
 	EditorScenePostImport();
+
+	Array get_args() const;
+	void _set_args(const Array &p_args);
 };
 
 class EditorScenePostImportPlugin : public RefCounted {

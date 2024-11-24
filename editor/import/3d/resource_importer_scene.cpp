@@ -123,6 +123,7 @@ void EditorSceneFormatImporter::_bind_methods() {
 void EditorScenePostImport::_bind_methods() {
 	GDVIRTUAL_BIND(_post_import, "scene")
 	ClassDB::bind_method(D_METHOD("get_source_file"), &EditorScenePostImport::get_source_file);
+	ClassDB::bind_method(D_METHOD("get_args"), &EditorScenePostImport::get_args);
 }
 
 Node *EditorScenePostImport::post_import(Node *p_scene) {
@@ -143,6 +144,14 @@ void EditorScenePostImport::init(const String &p_source_file) {
 }
 
 EditorScenePostImport::EditorScenePostImport() {
+}
+
+Array EditorScenePostImport::get_args() const {
+	return args;
+}
+
+void EditorScenePostImport::_set_args(const Array &p_args) {
+	args = p_args;
 }
 
 ///////////////////////////////////////////////////////
@@ -255,7 +264,7 @@ String ResourceImporterScene::get_importer_name() const {
 		return "scene";
 	} else if (_scene_import_type == "AnimationLibrary") {
 		return "animation_library";
-	}
+}
 	return _scene_import_type;
 }
 
@@ -263,7 +272,7 @@ String ResourceImporterScene::get_visible_name() const {
 	// This is displayed on the UI. Friendly names here are nice but not vital, so fall back to the type.
 	if (_scene_import_type == "PackedScene") {
 		return "Scene";
-	}
+}
 	return _scene_import_type.capitalize();
 }
 
@@ -274,7 +283,7 @@ void ResourceImporterScene::get_recognized_extensions(List<String> *p_extensions
 String ResourceImporterScene::get_save_extension() const {
 	if (_scene_import_type == "PackedScene") {
 		return "scn";
-	}
+}
 	return "res";
 }
 
@@ -290,16 +299,16 @@ bool ResourceImporterScene::get_option_visibility(const String &p_path, const St
 	if (_scene_import_type == "PackedScene") {
 		if (p_option.begins_with("animation/")) {
 			if (p_option != "animation/import" && !bool(p_options["animation/import"])) {
-				return false;
-			}
+			return false;
+		}
 		}
 	} else if (_scene_import_type == "AnimationLibrary") {
 		if (p_option == "animation/import") { // Option ignored, animation always imported.
 			return false;
 		}
 		if (p_option == "nodes/root_type" || p_option == "nodes/root_name" || p_option.begins_with("meshes/") || p_option.begins_with("skins/")) {
-			return false; // Nothing to do here for animations.
-		}
+		return false; // Nothing to do here for animations.
+	}
 	}
 
 	if (p_option == "meshes/lightmap_texel_size" && int(p_options["meshes/light_baking"]) != 2) {
@@ -312,8 +321,8 @@ bool ResourceImporterScene::get_option_visibility(const String &p_path, const St
 		if (ret.get_type() == Variant::BOOL) {
 			if (!ret) {
 				return false;
-			}
 		}
+	}
 	}
 
 	for (Ref<EditorSceneFormatImporter> importer : scene_importers) {
@@ -321,8 +330,8 @@ bool ResourceImporterScene::get_option_visibility(const String &p_path, const St
 		if (ret.get_type() == Variant::BOOL) {
 			if (!ret) {
 				return false;
-			}
 		}
+	}
 	}
 
 	return true;
@@ -2386,6 +2395,7 @@ void ResourceImporterScene::get_import_options(const String &p_path, List<Import
 	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "animation/remove_immutable_tracks"), true));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "animation/import_rest_as_RESET"), false));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::STRING, "import_script/path", PROPERTY_HINT_FILE, script_ext_hint), ""));
+	r_options->push_back(ImportOption(PropertyInfo(Variant::ARRAY, "import_script/args"), Array()));
 
 	r_options->push_back(ImportOption(PropertyInfo(Variant::DICTIONARY, "_subresources", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR), Dictionary()));
 
@@ -2908,8 +2918,8 @@ Error ResourceImporterScene::import(const String &p_source_file, const String &p
 		import_flags |= EditorSceneFormatImporter::IMPORT_ANIMATION;
 		import_flags |= EditorSceneFormatImporter::IMPORT_DISCARD_MESHES_AND_MATERIALS;
 	} else if (bool(p_options["animation/import"])) {
-		import_flags |= EditorSceneFormatImporter::IMPORT_ANIMATION;
-	}
+			import_flags |= EditorSceneFormatImporter::IMPORT_ANIMATION;
+		}
 
 	if (bool(p_options["skins/use_named_skins"])) {
 		import_flags |= EditorSceneFormatImporter::IMPORT_USE_NAMED_SKIN_BINDS;
@@ -3083,6 +3093,7 @@ Error ResourceImporterScene::import(const String &p_source_file, const String &p
 	progress.step(TTR("Running Custom Script..."), 2);
 
 	String post_import_script_path = p_options["import_script/path"];
+	Array post_import_script_args = p_options["import_script/args"];
 
 	Ref<EditorScenePostImport> post_import_script;
 
@@ -3118,6 +3129,7 @@ Error ResourceImporterScene::import(const String &p_source_file, const String &p
 	}
 
 	if (post_import_script.is_valid()) {
+		post_import_script->_set_args(post_import_script_args);
 		post_import_script->init(p_source_file);
 		scene = post_import_script->post_import(scene);
 		if (!scene) {
