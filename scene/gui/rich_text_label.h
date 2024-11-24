@@ -614,6 +614,10 @@ private:
 
 	String _get_prefix(Item *p_item, const Vector<int> &p_list_index, const Vector<ItemList *> &p_list_items);
 
+	static int _find_unquoted(const String &p_src, char32_t p_chr, int p_from);
+	static Vector<String> _split_unquoted(const String &p_src, char32_t p_splitter);
+	static String _get_tag_value(const String &p_tag);
+
 #ifndef DISABLE_DEPRECATED
 	// Kept for compatibility from 3.x to 4.0.
 	bool _set(const StringName &p_name, const Variant &p_value);
@@ -621,6 +625,9 @@ private:
 	bool use_bbcode = false;
 	String text;
 	void _apply_translation();
+
+	bool internal_stack_editing = false;
+	bool stack_externally_modified = false;
 
 	bool fit_content = false;
 

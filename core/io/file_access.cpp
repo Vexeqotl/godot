@@ -29,6 +29,7 @@
 /**************************************************************************/
 
 #include "file_access.h"
+#include "file_access.compat.inc"
 
 #include "core/config/project_settings.h"
 #include "core/crypto/crypto_core.h"
@@ -70,7 +71,7 @@ void FileAccess::_set_access_type(AccessType p_access) {
 
 Ref<FileAccess> FileAccess::create_for_path(const String &p_path) {
 	Ref<FileAccess> ret;
-	if (p_path.begins_with("res://")) {
+	if (p_path.begins_with("res://") || p_path.begins_with("uid://")) {
 		ret = create(ACCESS_RESOURCES);
 	} else if (p_path.begins_with("user://")) {
 		ret = create(ACCESS_USERDATA);
@@ -124,7 +125,7 @@ Ref<FileAccess> FileAccess::_open(const String &p_path, ModeFlags p_mode_flags) 
 	return fa;
 }
 
-Ref<FileAccess> FileAccess::open_encrypted(const String &p_path, ModeFlags p_mode_flags, const Vector<uint8_t> &p_key) {
+Ref<FileAccess> FileAccess::open_encrypted(const String &p_path, ModeFlags p_mode_flags, const Vector<uint8_t> &p_key, const Vector<uint8_t> &p_iv) {
 	Ref<FileAccess> fa = _open(p_path, p_mode_flags);
 	if (fa.is_null()) {
 		return fa;
@@ -132,7 +133,7 @@ Ref<FileAccess> FileAccess::open_encrypted(const String &p_path, ModeFlags p_mod
 
 	Ref<FileAccessEncrypted> fae;
 	fae.instantiate();
-	Error err = fae->open_and_parse(fa, p_key, (p_mode_flags == WRITE) ? FileAccessEncrypted::MODE_WRITE_AES256 : FileAccessEncrypted::MODE_READ);
+	Error err = fae->open_and_parse(fa, p_key, (p_mode_flags == WRITE) ? FileAccessEncrypted::MODE_WRITE_AES256 : FileAccessEncrypted::MODE_READ, true, p_iv);
 	last_file_open_error = err;
 	if (err) {
 		return Ref<FileAccess>();
@@ -182,13 +183,17 @@ FileAccess::AccessType FileAccess::get_access_type() const {
 }
 
 String FileAccess::fix_path(const String &p_path) const {
-	//helper used by file accesses that use a single filesystem
+	// Helper used by file accesses that use a single filesystem.
 
 	String r_path = p_path.replace("\\", "/");
 
 	switch (_access_type) {
 		case ACCESS_RESOURCES: {
 			if (ProjectSettings::get_singleton()) {
+				if (r_path.begins_with("uid://")) {
+					r_path = ResourceUID::uid_to_path(r_path);
+				}
+
 				if (r_path.begins_with("res://")) {
 					String resource_path = ProjectSettings::get_singleton()->get_resource_path();
 					if (!resource_path.is_empty()) {
@@ -261,6 +266,10 @@ uint64_t FileAccess::get_64() const {
 	}
 
 	return data;
+}
+
+float FileAccess::get_half() const {
+	return Math::half_to_float(get_16());
 }
 
 float FileAccess::get_float() const {
@@ -459,7 +468,7 @@ Vector<uint8_t> FileAccess::get_buffer(int64_t p_length) const {
 	}
 
 	Error err = data.resize(p_length);
-	ERR_FAIL_COND_V_MSG(err != OK, data, "Can't resize data to " + itos(p_length) + " elements.");
+	ERR_FAIL_COND_V_MSG(err != OK, data, vformat("Can't resize data to %d elements.", p_length));
 
 	uint8_t *w = data.ptrw();
 	int64_t len = get_buffer(w, p_length);
@@ -522,6 +531,10 @@ void FileAccess::store_real(real_t p_real) {
 	}
 }
 
+void FileAccess::store_half(float p_dest) {
+	store_16(Math::make_half_float(p_dest));
+}
+
 void FileAccess::store_float(float p_dest) {
 	MarshallFloat m;
 	m.f = p_dest;
@@ -540,7 +553,7 @@ uint64_t FileAccess::get_modified_time(const String &p_file) {
 	}
 
 	Ref<FileAccess> fa = create_for_path(p_file);
-	ERR_FAIL_COND_V_MSG(fa.is_null(), 0, "Cannot create FileAccess for path '" + p_file + "'.");
+	ERR_FAIL_COND_V_MSG(fa.is_null(), 0, vformat("Cannot create FileAccess for path '%s'.", p_file));
 
 	uint64_t mt = fa->_get_modified_time(p_file);
 	return mt;
@@ -552,7 +565,7 @@ BitField<FileAccess::UnixPermissionFlags> FileAccess::get_unix_permissions(const
 	}
 
 	Ref<FileAccess> fa = create_for_path(p_file);
-	ERR_FAIL_COND_V_MSG(fa.is_null(), 0, "Cannot create FileAccess for path '" + p_file + "'.");
+	ERR_FAIL_COND_V_MSG(fa.is_null(), 0, vformat("Cannot create FileAccess for path '%s'.", p_file));
 
 	return fa->_get_unix_permissions(p_file);
 }
@@ -563,7 +576,7 @@ Error FileAccess::set_unix_permissions(const String &p_file, BitField<FileAccess
 	}
 
 	Ref<FileAccess> fa = create_for_path(p_file);
-	ERR_FAIL_COND_V_MSG(fa.is_null(), ERR_CANT_CREATE, "Cannot create FileAccess for path '" + p_file + "'.");
+	ERR_FAIL_COND_V_MSG(fa.is_null(), ERR_CANT_CREATE, vformat("Cannot create FileAccess for path '%s'.", p_file));
 
 	Error err = fa->_set_unix_permissions(p_file, p_permissions);
 	return err;
@@ -575,7 +588,7 @@ bool FileAccess::get_hidden_attribute(const String &p_file) {
 	}
 
 	Ref<FileAccess> fa = create_for_path(p_file);
-	ERR_FAIL_COND_V_MSG(fa.is_null(), false, "Cannot create FileAccess for path '" + p_file + "'.");
+	ERR_FAIL_COND_V_MSG(fa.is_null(), false, vformat("Cannot create FileAccess for path '%s'.", p_file));
 
 	return fa->_get_hidden_attribute(p_file);
 }
@@ -586,7 +599,7 @@ Error FileAccess::set_hidden_attribute(const String &p_file, bool p_hidden) {
 	}
 
 	Ref<FileAccess> fa = create_for_path(p_file);
-	ERR_FAIL_COND_V_MSG(fa.is_null(), ERR_CANT_CREATE, "Cannot create FileAccess for path '" + p_file + "'.");
+	ERR_FAIL_COND_V_MSG(fa.is_null(), ERR_CANT_CREATE, vformat("Cannot create FileAccess for path '%s'.", p_file));
 
 	Error err = fa->_set_hidden_attribute(p_file, p_hidden);
 	return err;
@@ -598,7 +611,7 @@ bool FileAccess::get_read_only_attribute(const String &p_file) {
 	}
 
 	Ref<FileAccess> fa = create_for_path(p_file);
-	ERR_FAIL_COND_V_MSG(fa.is_null(), false, "Cannot create FileAccess for path '" + p_file + "'.");
+	ERR_FAIL_COND_V_MSG(fa.is_null(), false, vformat("Cannot create FileAccess for path '%s'.", p_file));
 
 	return fa->_get_read_only_attribute(p_file);
 }
@@ -609,7 +622,7 @@ Error FileAccess::set_read_only_attribute(const String &p_file, bool p_ro) {
 	}
 
 	Ref<FileAccess> fa = create_for_path(p_file);
-	ERR_FAIL_COND_V_MSG(fa.is_null(), ERR_CANT_CREATE, "Cannot create FileAccess for path '" + p_file + "'.");
+	ERR_FAIL_COND_V_MSG(fa.is_null(), ERR_CANT_CREATE, vformat("Cannot create FileAccess for path '%s'.", p_file));
 
 	Error err = fa->_set_read_only_attribute(p_file, p_ro);
 	return err;
@@ -697,7 +710,7 @@ Vector<uint8_t> FileAccess::get_file_as_bytes(const String &p_path, Error *r_err
 		if (r_error) { // if error requested, do not throw error
 			return Vector<uint8_t>();
 		}
-		ERR_FAIL_V_MSG(Vector<uint8_t>(), "Can't open file from path '" + String(p_path) + "'.");
+		ERR_FAIL_V_MSG(Vector<uint8_t>(), vformat("Can't open file from path '%s'.", String(p_path)));
 	}
 	Vector<uint8_t> data;
 	data.resize(f->get_length());
@@ -715,7 +728,7 @@ String FileAccess::get_file_as_string(const String &p_path, Error *r_error) {
 		if (r_error) {
 			return String();
 		}
-		ERR_FAIL_V_MSG(String(), "Can't get file as string from path '" + String(p_path) + "'.");
+		ERR_FAIL_V_MSG(String(), vformat("Can't get file as string from path '%s'.", String(p_path)));
 	}
 
 	String ret;
@@ -806,7 +819,7 @@ String FileAccess::get_sha256(const String &p_file) {
 
 void FileAccess::_bind_methods() {
 	ClassDB::bind_static_method("FileAccess", D_METHOD("open", "path", "flags"), &FileAccess::_open);
-	ClassDB::bind_static_method("FileAccess", D_METHOD("open_encrypted", "path", "mode_flags", "key"), &FileAccess::open_encrypted);
+	ClassDB::bind_static_method("FileAccess", D_METHOD("open_encrypted", "path", "mode_flags", "key", "iv"), &FileAccess::open_encrypted, DEFVAL(Vector<uint8_t>()));
 	ClassDB::bind_static_method("FileAccess", D_METHOD("open_encrypted_with_pass", "path", "mode_flags", "pass"), &FileAccess::open_encrypted_pass);
 	ClassDB::bind_static_method("FileAccess", D_METHOD("open_compressed", "path", "mode_flags", "compression_mode"), &FileAccess::open_compressed, DEFVAL(0));
 	ClassDB::bind_static_method("FileAccess", D_METHOD("get_open_error"), &FileAccess::get_open_error);
@@ -828,6 +841,7 @@ void FileAccess::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_16"), &FileAccess::get_16);
 	ClassDB::bind_method(D_METHOD("get_32"), &FileAccess::get_32);
 	ClassDB::bind_method(D_METHOD("get_64"), &FileAccess::get_64);
+	ClassDB::bind_method(D_METHOD("get_half"), &FileAccess::get_half);
 	ClassDB::bind_method(D_METHOD("get_float"), &FileAccess::get_float);
 	ClassDB::bind_method(D_METHOD("get_double"), &FileAccess::get_double);
 	ClassDB::bind_method(D_METHOD("get_real"), &FileAccess::get_real);
@@ -846,6 +860,7 @@ void FileAccess::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("store_16", "value"), &FileAccess::store_16);
 	ClassDB::bind_method(D_METHOD("store_32", "value"), &FileAccess::store_32);
 	ClassDB::bind_method(D_METHOD("store_64", "value"), &FileAccess::store_64);
+	ClassDB::bind_method(D_METHOD("store_half", "value"), &FileAccess::store_half);
 	ClassDB::bind_method(D_METHOD("store_float", "value"), &FileAccess::store_float);
 	ClassDB::bind_method(D_METHOD("store_double", "value"), &FileAccess::store_double);
 	ClassDB::bind_method(D_METHOD("store_real", "value"), &FileAccess::store_real);

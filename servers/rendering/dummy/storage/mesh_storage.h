@@ -64,7 +64,7 @@ public:
 
 	/* MESH API */
 
-	bool owns_mesh(RID p_rid) { return mesh_owner.owns(p_rid); };
+	bool owns_mesh(RID p_rid) { return mesh_owner.owns(p_rid); }
 
 	virtual RID mesh_allocate() override;
 	virtual void mesh_initialize(RID p_rid) override;
@@ -163,13 +163,14 @@ public:
 	virtual AABB _multimesh_get_custom_aabb(RID p_multimesh) const override { return AABB(); }
 
 	virtual RID _multimesh_get_mesh(RID p_multimesh) const override { return RID(); }
-	virtual AABB _multimesh_get_aabb(RID p_multimesh) const override { return AABB(); }
+	virtual AABB _multimesh_get_aabb(RID p_multimesh) override { return AABB(); }
 
 	virtual Transform3D _multimesh_instance_get_transform(RID p_multimesh, int p_index) const override { return Transform3D(); }
 	virtual Transform2D _multimesh_instance_get_transform_2d(RID p_multimesh, int p_index) const override { return Transform2D(); }
 	virtual Color _multimesh_instance_get_color(RID p_multimesh, int p_index) const override { return Color(); }
 	virtual Color _multimesh_instance_get_custom_data(RID p_multimesh, int p_index) const override { return Color(); }
 	virtual void _multimesh_set_buffer(RID p_multimesh, const Vector<float> &p_buffer) override;
+	virtual RID _multimesh_get_buffer_rd_rid(RID p_multimesh) const override { return RID(); }
 	virtual Vector<float> _multimesh_get_buffer(RID p_multimesh) const override;
 
 	virtual void _multimesh_set_visible_instances(RID p_multimesh, int p_visible) override {}

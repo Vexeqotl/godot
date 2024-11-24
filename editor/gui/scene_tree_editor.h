@@ -199,14 +199,17 @@ class SceneTreeDialog : public ConfirmationDialog {
 	LineEdit *filter = nullptr;
 	CheckButton *show_all_nodes = nullptr;
 	LocalVector<TextureRect *> valid_type_icons;
+	HBoxContainer *allowed_types_hbox = nullptr;
 
 	void _select();
 	void _cancel();
 	void _selected_changed();
 	void _filter_changed(const String &p_filter);
+	void _on_filter_gui_input(const Ref<InputEvent> &p_event);
 	void _show_all_nodes_changed(bool p_button_pressed);
 
 protected:
+	void _update_valid_type_icons();
 	void _notification(int p_what);
 	static void _bind_methods();
 

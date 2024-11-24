@@ -109,6 +109,12 @@ protected:
 
 	static FileCloseFailNotify close_fail_notify;
 
+#ifndef DISABLE_DEPRECATED
+	static Ref<FileAccess> _open_encrypted_bind_compat_98918(const String &p_path, ModeFlags p_mode_flags, const Vector<uint8_t> &p_key);
+
+	static void _bind_compatibility_methods();
+#endif
+
 private:
 	static bool backup_save;
 	thread_local static Error last_file_open_error;
@@ -142,6 +148,7 @@ public:
 	virtual uint32_t get_32() const; ///< get 32 bits uint
 	virtual uint64_t get_64() const; ///< get 64 bits uint
 
+	virtual float get_half() const;
 	virtual float get_float() const;
 	virtual double get_double() const;
 	virtual real_t get_real() const;
@@ -173,6 +180,7 @@ public:
 	virtual void store_32(uint32_t p_dest); ///< store 32 bits uint
 	virtual void store_64(uint64_t p_dest); ///< store 64 bits uint
 
+	virtual void store_half(float p_dest);
 	virtual void store_float(float p_dest);
 	virtual void store_double(double p_dest);
 	virtual void store_real(real_t p_real);
@@ -199,7 +207,7 @@ public:
 	static Ref<FileAccess> create_for_path(const String &p_path);
 	static Ref<FileAccess> open(const String &p_path, int p_mode_flags, Error *r_error = nullptr); /// Create a file access (for the current platform) this is the only portable way of accessing files.
 
-	static Ref<FileAccess> open_encrypted(const String &p_path, ModeFlags p_mode_flags, const Vector<uint8_t> &p_key);
+	static Ref<FileAccess> open_encrypted(const String &p_path, ModeFlags p_mode_flags, const Vector<uint8_t> &p_key, const Vector<uint8_t> &p_iv = Vector<uint8_t>());
 	static Ref<FileAccess> open_encrypted_pass(const String &p_path, ModeFlags p_mode_flags, const String &p_pass);
 	static Ref<FileAccess> open_compressed(const String &p_path, ModeFlags p_mode_flags, CompressionMode p_compress_mode = COMPRESSION_FASTLZ);
 	static Error get_open_error();
@@ -215,8 +223,8 @@ public:
 	static bool get_read_only_attribute(const String &p_file);
 	static Error set_read_only_attribute(const String &p_file, bool p_ro);
 
-	static void set_backup_save(bool p_enable) { backup_save = p_enable; };
-	static bool is_backup_save_enabled() { return backup_save; };
+	static void set_backup_save(bool p_enable) { backup_save = p_enable; }
+	static bool is_backup_save_enabled() { return backup_save; }
 
 	static String get_md5(const String &p_file);
 	static String get_sha256(const String &p_file);

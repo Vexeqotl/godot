@@ -39,7 +39,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 class FileAccessWindowsPipe : public FileAccess {
-	HANDLE fd[2] = { 0, 0 };
+	HANDLE fd[2] = { nullptr, nullptr };
 
 	mutable Error last_error = OK;
 
@@ -49,7 +49,7 @@ class FileAccessWindowsPipe : public FileAccess {
 	void _close();
 
 public:
-	Error open_existing(HANDLE p_rfd, HANDLE p_wfd);
+	Error open_existing(HANDLE p_rfd, HANDLE p_wfd, bool p_blocking);
 
 	virtual Error open_internal(const String &p_path, int p_mode_flags) override; ///< open a file
 	virtual bool is_open() const override; ///< true when file is open

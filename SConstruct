@@ -1,7 +1,8 @@
 #!/usr/bin/env python
+from misc.utility.scons_hints import *
 
-EnsureSConsVersion(3, 1, 2)
-EnsurePythonVersion(3, 6)
+EnsureSConsVersion(4, 0)
+EnsurePythonVersion(3, 8)
 
 # System
 import atexit
@@ -58,7 +59,7 @@ import glsl_builders
 import methods
 import scu_builders
 from methods import print_error, print_warning
-from platform_methods import architecture_aliases, architectures
+from platform_methods import architecture_aliases, architectures, compatibility_platform_aliases
 
 if ARGUMENTS.get("target", "editor") == "editor":
     _helper_module("editor.editor_builders", "editor/editor_builders.py")
@@ -148,12 +149,10 @@ env.PrependENVPath("PKG_CONFIG_PATH", os.getenv("PKG_CONFIG_PATH"))
 if "TERM" in os.environ:  # Used for colored output.
     env["ENV"]["TERM"] = os.environ["TERM"]
 
-env.disabled_modules = []
+env.disabled_modules = set()
 env.module_version_string = ""
 env.msvc = False
 env.scons_version = env._get_major_minor_revision(scons_raw_version)
-
-env.__class__.disable_module = methods.disable_module
 
 env.__class__.add_module_version_string = methods.add_module_version_string
 
@@ -230,7 +229,11 @@ opts.Add("custom_modules", "A list of comma-separated directory paths containing
 opts.Add(BoolVariable("custom_modules_recursive", "Detect custom modules recursively for each specified path.", True))
 
 # Advanced options
-opts.Add(BoolVariable("dev_mode", "Alias for dev options: verbose=yes warnings=extra werror=yes tests=yes", False))
+opts.Add(
+    BoolVariable(
+        "dev_mode", "Alias for dev options: verbose=yes warnings=extra werror=yes tests=yes strict_checks=yes", False
+    )
+)
 opts.Add(BoolVariable("tests", "Build the unit tests", False))
 opts.Add(BoolVariable("fast_unsafe", "Enable unsafe options for faster rebuilds", False))
 opts.Add(BoolVariable("ninja", "Use the ninja backend for faster rebuilds", False))
@@ -262,10 +265,13 @@ opts.Add(
     "",
 )
 opts.Add(BoolVariable("use_precise_math_checks", "Math checks use very precise epsilon (debug option)", False))
+opts.Add(BoolVariable("strict_checks", "Enforce stricter checks (debug option)", False))
 opts.Add(BoolVariable("scu_build", "Use single compilation unit build", False))
 opts.Add("scu_limit", "Max includes per SCU file when using scu_build (determines RAM use)", "0")
 opts.Add(BoolVariable("engine_update_check", "Enable engine update checks in the Project Manager", True))
 opts.Add(BoolVariable("steamapi", "Enable minimal SteamAPI integration for usage time tracking (editor only)", False))
+opts.Add("cache_path", "Path to a directory where SCons cache files will be stored. No value disables the cache.", "")
+opts.Add("cache_limit", "Max size (in GiB) for the SCons cache. 0 means no limit.", "0")
 
 # Thirdparty libraries
 opts.Add(BoolVariable("builtin_brotli", "Use the built-in Brotli library", True))
@@ -293,7 +299,6 @@ opts.Add(BoolVariable("builtin_pcre2_with_jit", "Use JIT compiler for the built-
 opts.Add(BoolVariable("builtin_recastnavigation", "Use the built-in Recast navigation library", True))
 opts.Add(BoolVariable("builtin_rvo2_2d", "Use the built-in RVO2 2D library", True))
 opts.Add(BoolVariable("builtin_rvo2_3d", "Use the built-in RVO2 3D library", True))
-opts.Add(BoolVariable("builtin_squish", "Use the built-in squish library", True))
 opts.Add(BoolVariable("builtin_xatlas", "Use the built-in xatlas library", True))
 opts.Add(BoolVariable("builtin_zlib", "Use the built-in zlib library", True))
 opts.Add(BoolVariable("builtin_zstd", "Use the built-in Zstd library", True))
@@ -316,6 +321,9 @@ opts.Add("rcflags", "Custom flags for Windows resource compiler")
 # Update the environment to have all above options defined
 # in following code (especially platform and custom_modules).
 opts.Update(env)
+
+# Setup caching logic early to catch everything.
+methods.prepare_cache(env)
 
 # Copy custom environment variables if set.
 if env["import_env_vars"]:
@@ -346,27 +354,18 @@ if env["platform"] == "":
     if env["platform"] != "":
         print(f'Automatically detected platform: {env["platform"]}')
 
-if env["platform"] == "osx":
-    # Deprecated alias kept for compatibility.
-    print_warning('Platform "osx" has been renamed to "macos" in Godot 4. Building for platform "macos".')
-    env["platform"] = "macos"
+# Deprecated aliases kept for compatibility.
+if env["platform"] in compatibility_platform_aliases:
+    alias = env["platform"]
+    platform = compatibility_platform_aliases[alias]
+    print_warning(
+        f'Platform "{alias}" has been renamed to "{platform}" in Godot 4. Building for platform "{platform}".'
+    )
+    env["platform"] = platform
 
-if env["platform"] == "iphone":
-    # Deprecated alias kept for compatibility.
-    print_warning('Platform "iphone" has been renamed to "ios" in Godot 4. Building for platform "ios".')
-    env["platform"] = "ios"
-
-if env["platform"] in ["linux", "bsd", "x11"]:
-    if env["platform"] == "x11":
-        # Deprecated alias kept for compatibility.
-        print_warning('Platform "x11" has been renamed to "linuxbsd" in Godot 4. Building for platform "linuxbsd".')
-    # Alias for convenience.
+# Alias for convenience.
+if env["platform"] in ["linux", "bsd"]:
     env["platform"] = "linuxbsd"
-
-if env["platform"] == "javascript":
-    # Deprecated alias kept for compatibility.
-    print_warning('Platform "javascript" has been renamed to "web" in Godot 4. Building for platform "web".')
-    env["platform"] = "web"
 
 if env["platform"] not in platform_list:
     text = "The following platforms are available:\n\t{}\n".format("\n\t".join(platform_list))
@@ -383,8 +382,7 @@ if env["platform"] not in platform_list:
 
 # Add platform-specific options.
 if env["platform"] in platform_opts:
-    for opt in platform_opts[env["platform"]]:
-        opts.Add(opt)
+    opts.AddVariables(*platform_opts[env["platform"]])
 
 # Platform-specific flags.
 # These can sometimes override default options, so they need to be processed
@@ -440,12 +438,11 @@ for name, path in modules_detected.items():
     else:
         enabled = False
 
-    opts.Add(BoolVariable("module_" + name + "_enabled", "Enable module '%s'" % (name,), enabled))
+    opts.Add(BoolVariable(f"module_{name}_enabled", f"Enable module '{name}'", enabled))
 
     # Add module-specific options.
     try:
-        for opt in config.get_opts(env["platform"]):
-            opts.Add(opt)
+        opts.AddVariables(*config.get_opts(env["platform"]))
     except AttributeError:
         pass
 
@@ -580,7 +577,7 @@ env.Append(RCFLAGS=env.get("rcflags", "").split())
 # Feature build profile
 env.disabled_classes = []
 if env["build_profile"] != "":
-    print('Using feature build profile: "{}"'.format(env["build_profile"]))
+    print(f'Using feature build profile: "{env["build_profile"]}"')
     import json
 
     try:
@@ -592,7 +589,7 @@ if env["build_profile"] != "":
             for c in dbo:
                 env[c] = dbo[c]
     except json.JSONDecodeError:
-        print_error('Failed to open feature build profile: "{}"'.format(env["build_profile"]))
+        print_error(f'Failed to open feature build profile: "{env["build_profile"]}"')
         Exit(255)
 
 # 'dev_mode' and 'production' are aliases to set default options if they haven't been
@@ -602,11 +599,17 @@ if env["dev_mode"]:
     env["warnings"] = ARGUMENTS.get("warnings", "extra")
     env["werror"] = methods.get_cmdline_bool("werror", True)
     env["tests"] = methods.get_cmdline_bool("tests", True)
+    env["strict_checks"] = methods.get_cmdline_bool("strict_checks", True)
 if env["production"]:
     env["use_static_cpp"] = methods.get_cmdline_bool("use_static_cpp", True)
     env["debug_symbols"] = methods.get_cmdline_bool("debug_symbols", False)
+    if platform_arg == "android":
+        env["swappy"] = methods.get_cmdline_bool("swappy", True)
     # LTO "auto" means we handle the preferred option in each platform detect.py.
     env["lto"] = ARGUMENTS.get("lto", "auto")
+
+if env["strict_checks"]:
+    env.Append(CPPDEFINES=["STRICT_CHECKS"])
 
 # Run SCU file generation script if in a SCU build.
 if env["scu_build"]:
@@ -630,25 +633,18 @@ if env.dev_build:
     print("NOTE: Developer build, with debug optimization level and debug symbols (unless overridden).")
 
 # Enforce our minimal compiler version requirements
-cc_version = methods.get_compiler_version(env) or {
-    "major": None,
-    "minor": None,
-    "patch": None,
-    "metadata1": None,
-    "metadata2": None,
-    "date": None,
-}
-cc_version_major = int(cc_version["major"] or -1)
-cc_version_minor = int(cc_version["minor"] or -1)
-cc_version_metadata1 = cc_version["metadata1"] or ""
+cc_version = methods.get_compiler_version(env)
+cc_version_major = cc_version["major"]
+cc_version_minor = cc_version["minor"]
+cc_version_metadata1 = cc_version["metadata1"]
 
-if methods.using_gcc(env):
-    if cc_version_major == -1:
-        print_warning(
-            "Couldn't detect compiler version, skipping version checks. "
-            "Build may fail if the compiler doesn't support C++17 fully."
-        )
-    elif cc_version_major < 9:
+if cc_version_major == -1:
+    print_warning(
+        "Couldn't detect compiler version, skipping version checks. "
+        "Build may fail if the compiler doesn't support C++17 fully."
+    )
+elif methods.using_gcc(env):
+    if cc_version_major < 9:
         print_error(
             "Detected GCC version older than 9, which does not fully support "
             "C++17, or has bugs when compiling Godot. Supported versions are 9 "
@@ -664,45 +660,54 @@ if methods.using_gcc(env):
             "to switch to posix threads."
         )
         Exit(255)
-    if env["debug_paths_relative"] and cc_version_major < 8:
-        print_warning("GCC < 8 doesn't support -ffile-prefix-map, disabling `debug_paths_relative` option.")
-        env["debug_paths_relative"] = False
 elif methods.using_clang(env):
-    if cc_version_major == -1:
-        print_warning(
-            "Couldn't detect compiler version, skipping version checks. "
-            "Build may fail if the compiler doesn't support C++17 fully."
-        )
     # Apple LLVM versions differ from upstream LLVM version \o/, compare
     # in https://en.wikipedia.org/wiki/Xcode#Toolchain_versions
-    elif env["platform"] == "macos" or env["platform"] == "ios":
-        vanilla = methods.is_vanilla_clang(env)
-        if vanilla and cc_version_major < 6:
-            print_warning(
-                "Detected Clang version older than 6, which does not fully support "
-                "C++17. Supported versions are Clang 6 and later."
-            )
-            Exit(255)
-        elif not vanilla and cc_version_major < 10:
+    if methods.is_apple_clang(env):
+        if cc_version_major < 10:
             print_error(
                 "Detected Apple Clang version older than 10, which does not fully "
                 "support C++17. Supported versions are Apple Clang 10 and later."
             )
             Exit(255)
-        if env["debug_paths_relative"] and not vanilla and cc_version_major < 12:
+        elif env["debug_paths_relative"] and cc_version_major < 12:
             print_warning(
                 "Apple Clang < 12 doesn't support -ffile-prefix-map, disabling `debug_paths_relative` option."
             )
             env["debug_paths_relative"] = False
-    elif cc_version_major < 6:
+    else:
+        if cc_version_major < 6:
+            print_error(
+                "Detected Clang version older than 6, which does not fully support "
+                "C++17. Supported versions are Clang 6 and later."
+            )
+            Exit(255)
+        elif env["debug_paths_relative"] and cc_version_major < 10:
+            print_warning("Clang < 10 doesn't support -ffile-prefix-map, disabling `debug_paths_relative` option.")
+            env["debug_paths_relative"] = False
+
+elif env.msvc:
+    # Ensure latest minor builds of Visual Studio 2017/2019.
+    # https://github.com/godotengine/godot/pull/94995#issuecomment-2336464574
+    if cc_version_major == 16 and cc_version_minor < 11:
         print_error(
-            "Detected Clang version older than 6, which does not fully support "
-            "C++17. Supported versions are Clang 6 and later."
+            "Detected Visual Studio 2019 version older than 16.11, which has bugs "
+            "when compiling Godot. Use a newer VS2019 version, or VS2022."
         )
         Exit(255)
-    if env["debug_paths_relative"] and cc_version_major < 10:
-        print_warning("Clang < 10 doesn't support -ffile-prefix-map, disabling `debug_paths_relative` option.")
-        env["debug_paths_relative"] = False
+    if cc_version_major == 15 and cc_version_minor < 9:
+        print_error(
+            "Detected Visual Studio 2017 version older than 15.9, which has bugs "
+            "when compiling Godot. Use a newer VS2017 version, or VS2019/VS2022."
+        )
+        Exit(255)
+    if cc_version_major < 15:
+        print_error(
+            "Detected Visual Studio 2015 or earlier, which is unsupported in Godot. "
+            "Supported versions are Visual Studio 2017 and later."
+        )
+        Exit(255)
+
 
 # Set optimize and debug_symbols flags.
 # "custom" means do nothing and let users set their own optimization flags.
@@ -744,7 +749,7 @@ else:
             project_path = Dir("#").abspath
             env.Append(CCFLAGS=[f"-ffile-prefix-map={project_path}=."])
     else:
-        if methods.using_clang(env) and not methods.is_vanilla_clang(env):
+        if methods.is_apple_clang(env):
             # Apple Clang, its linker doesn't like -s.
             env.Append(LINKFLAGS=["-Wl,-S", "-Wl,-x", "-Wl,-dead_strip"])
         else:
@@ -780,13 +785,17 @@ if env["lto"] != "none":
 # This needs to come after `configure`, otherwise we don't have env.msvc.
 if not env.msvc:
     # Specifying GNU extensions support explicitly, which are supported by
-    # both GCC and Clang. Both currently default to gnu11 and gnu++14.
-    env.Prepend(CFLAGS=["-std=gnu11"])
+    # both GCC and Clang. Both currently default to gnu17 and gnu++17.
+    env.Prepend(CFLAGS=["-std=gnu17"])
     env.Prepend(CXXFLAGS=["-std=gnu++17"])
 else:
-    # MSVC doesn't have clear C standard support, /std only covers C++.
-    # We apply it to CCFLAGS (both C and C++ code) in case it impacts C features.
-    env.Prepend(CCFLAGS=["/std:c++17"])
+    # MSVC started offering C standard support with Visual Studio 2019 16.8, which covers all
+    # of our supported VS2019 & VS2022 versions; VS2017 will only pass the C++ standard.
+    env.Prepend(CXXFLAGS=["/std:c++17"])
+    if cc_version_major < 16:
+        print_warning("Visual Studio 2017 cannot specify a C-Standard.")
+    else:
+        env.Prepend(CFLAGS=["/std:c17"])
     # MSVC is non-conforming with the C++ standard by default, so we enable more conformance.
     # Note that this is still not complete conformance, as certain Windows-related headers
     # don't compile under complete conformance.
@@ -827,6 +836,7 @@ if env.msvc and not methods.using_clang(env):  # MSVC
                 "/wd4245",
                 "/wd4267",
                 "/wd4305",  # C4305 (truncation): double to float or real_t, too hard to avoid.
+                "/wd4324",  # C4820 (structure was padded due to alignment specifier)
                 "/wd4514",  # C4514 (unreferenced inline function has been removed)
                 "/wd4714",  # C4714 (function marked as __forceinline not inlined)
                 "/wd4820",  # C4820 (padding added after construct)
@@ -841,8 +851,6 @@ else:  # GCC, Clang
 
     if methods.using_gcc(env):
         common_warnings += ["-Wshadow", "-Wno-misleading-indentation"]
-        if cc_version_major == 7:  # Bogus warning fixed in 8+.
-            common_warnings += ["-Wno-strict-overflow"]
         if cc_version_major < 11:
             # Regression in GCC 9/10, spams so much in our variadic templates
             # that we need to outright disable it.
@@ -918,7 +926,7 @@ env.module_icons_paths = []
 env.doc_class_path = platform_doc_class_path
 
 for name, path in modules_detected.items():
-    if not env["module_" + name + "_enabled"]:
+    if not env[f"module_{name}_enabled"]:
         continue
     sys.path.insert(0, path)
     env.current_module = name
@@ -1025,35 +1033,19 @@ GLSL_BUILDERS = {
 }
 env.Append(BUILDERS=GLSL_BUILDERS)
 
-scons_cache_path = os.environ.get("SCONS_CACHE")
-if scons_cache_path is not None:
-    CacheDir(scons_cache_path)
-    print("Scons cache enabled... (path: '" + scons_cache_path + "')")
-
-if env["vsproj"]:
-    env.vs_incs = []
-    env.vs_srcs = []
-
 if env["compiledb"]:
-    if env.scons_version < (4, 0, 0):
-        # Generating the compilation DB (`compile_commands.json`) requires SCons 4.0.0 or later.
-        print_error(
-            "The `compiledb=yes` option requires SCons 4.0 or later, but your version is %s." % scons_raw_version
-        )
-        Exit(255)
-
     env.Tool("compilation_db")
     env.Alias("compiledb", env.CompilationDatabase())
 
 if env["ninja"]:
     if env.scons_version < (4, 2, 0):
-        print_error("The `ninja=yes` option requires SCons 4.2 or later, but your version is %s." % scons_raw_version)
+        print_error(f"The `ninja=yes` option requires SCons 4.2 or later, but your version is {scons_raw_version}.")
         Exit(255)
 
     SetOption("experimental", "ninja")
     env["NINJA_FILE_NAME"] = env["ninja_file"]
     env["NINJA_DISABLE_AUTO_RUN"] = not env["ninja_auto_run"]
-    env.Tool("ninja")
+    env.Tool("ninja", env["ninja_file"])
 
 # Threads
 if env["threads"]:
@@ -1092,7 +1084,6 @@ if "check_c_headers" in env:
             env.AppendUnique(CPPDEFINES=[headers[header]])
 
 
-# FIXME: This method mixes both cosmetic progress stuff and cache handling...
 methods.show_progress(env)
 # TODO: replace this with `env.Dump(format="json")`
 # once we start requiring SCons 4.0 as min version.
@@ -1116,7 +1107,7 @@ atexit.register(print_elapsed_time)
 
 
 def purge_flaky_files():
-    paths_to_keep = ["ninja.build"]
+    paths_to_keep = [env["ninja_file"]]
     for build_failure in GetBuildFailures():
         path = build_failure.node.path
         if os.path.isfile(path) and path not in paths_to_keep:
