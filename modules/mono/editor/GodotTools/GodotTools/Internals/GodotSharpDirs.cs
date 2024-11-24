@@ -60,7 +60,7 @@ namespace GodotTools.Internals
             }
         }
 
-        [MemberNotNull("_projectAssemblyName", "_projectSlnPath", "_projectCsProjPath")]
+        [MemberNotNull("_projectAssemblyName", "_projectSlnPath")]
         public static void DetermineProjectLocation()
         {
             _projectAssemblyName = (string?)ProjectSettings.GetSetting("dotnet/project/assembly_name");
@@ -76,19 +76,12 @@ namespace GodotTools.Internals
             else if (!slnParentDir.StartsWith("res://", System.StringComparison.Ordinal))
                 slnParentDir = "res://" + slnParentDir;
 
-            // The csproj should be in the same folder as project.godot.
-            string csprojParentDir = "res://";
-
             _projectSlnPath = Path.Combine(ProjectSettings.GlobalizePath(slnParentDir),
                 string.Concat(_projectAssemblyName, ".sln"));
-
-            _projectCsProjPath = Path.Combine(ProjectSettings.GlobalizePath(csprojParentDir),
-                string.Concat(_projectAssemblyName, ".csproj"));
         }
 
         private static string? _projectAssemblyName;
         private static string? _projectSlnPath;
-        private static string? _projectCsProjPath;
 
         public static string ProjectAssemblyName
         {
@@ -110,23 +103,13 @@ namespace GodotTools.Internals
             }
         }
 
-        public static string ProjectCsProjPath
-        {
-            get
-            {
-                if (_projectCsProjPath == null)
-                    DetermineProjectLocation();
-                return _projectCsProjPath;
-            }
-        }
-
         public static string ProjectBaseOutputPath
         {
             get
             {
-                if (_projectCsProjPath == null)
+                if (_projectSlnPath == null)
                     DetermineProjectLocation();
-                return Path.Combine(Path.GetDirectoryName(_projectCsProjPath)!, ".godot", "mono", "temp", "bin");
+                return Path.Combine(Path.GetDirectoryName(_projectSlnPath)!, ".godot", "mono", "temp", "bin");
             }
         }
 

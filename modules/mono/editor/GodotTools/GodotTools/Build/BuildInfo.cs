@@ -11,7 +11,6 @@ namespace GodotTools.Build
     public sealed partial class BuildInfo : RefCounted // TODO Remove RefCounted once we have proper serialization
     {
         public string Solution { get; private set; }
-        public string Project { get; private set; }
         public string Configuration { get; private set; }
         public string? RuntimeIdentifier { get; private set; }
         public string? PublishOutputDir { get; private set; }
@@ -28,7 +27,6 @@ namespace GodotTools.Build
         {
             return obj is BuildInfo other &&
                 other.Solution == Solution &&
-                other.Project == Project &&
                 other.Configuration == Configuration && other.RuntimeIdentifier == RuntimeIdentifier &&
                 other.PublishOutputDir == PublishOutputDir && other.Restore == Restore &&
                 other.Rebuild == Rebuild && other.OnlyClean == OnlyClean &&
@@ -40,7 +38,6 @@ namespace GodotTools.Build
         {
             var hash = new HashCode();
             hash.Add(Solution);
-            hash.Add(Project);
             hash.Add(Configuration);
             hash.Add(RuntimeIdentifier);
             hash.Add(PublishOutputDir);
@@ -56,25 +53,22 @@ namespace GodotTools.Build
         private BuildInfo()
         {
             Solution = string.Empty;
-            Project = string.Empty;
             Configuration = string.Empty;
         }
 
-        public BuildInfo(string solution, string project, string configuration, bool restore, bool rebuild, bool onlyClean)
+        public BuildInfo(string solution, string configuration, bool restore, bool rebuild, bool onlyClean)
         {
             Solution = solution;
-            Project = project;
             Configuration = configuration;
             Restore = restore;
             Rebuild = rebuild;
             OnlyClean = onlyClean;
         }
 
-        public BuildInfo(string solution, string project, string configuration, string runtimeIdentifier,
+        public BuildInfo(string solution, string configuration, string runtimeIdentifier,
             string publishOutputDir, bool restore, bool rebuild, bool onlyClean)
         {
             Solution = solution;
-            Project = project;
             Configuration = configuration;
             RuntimeIdentifier = runtimeIdentifier;
             PublishOutputDir = publishOutputDir;
