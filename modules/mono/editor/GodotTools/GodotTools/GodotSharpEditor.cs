@@ -60,7 +60,7 @@ namespace GodotTools
         [UsedImplicitly]
         private bool CreateProjectSolutionIfNeeded()
         {
-            if (!File.Exists(GodotSharpDirs.ProjectSlnPath) || !File.Exists(GodotSharpDirs.ProjectCsProjPath))
+            if (!File.Exists(GodotSharpDirs.ProjectSlnPath))
             {
                 return CreateProjectSolution();
             }
@@ -75,17 +75,16 @@ namespace GodotTools
             {
                 pr.Step("Generating C# project...".TTR());
 
-                string csprojDir = Path.GetDirectoryName(GodotSharpDirs.ProjectCsProjPath)!;
                 string slnDir = Path.GetDirectoryName(GodotSharpDirs.ProjectSlnPath)!;
                 string name = GodotSharpDirs.ProjectAssemblyName;
-                string guid = CsProjOperations.GenerateGameProject(csprojDir, name);
+                string guid = CsProjOperations.GenerateGameProject(slnDir, name);
 
                 if (guid.Length > 0)
                 {
                     var solution = new DotNetSolution(name, slnDir);
 
                     var projectInfo = new DotNetSolution.ProjectInfo(guid,
-                        Path.GetRelativePath(slnDir, GodotSharpDirs.ProjectCsProjPath),
+                        $"{name}.csproj",
                         new List<string> { "Debug", "ExportDebug", "ExportRelease" });
 
                     solution.AddNewProject(name, projectInfo);
@@ -127,7 +126,7 @@ namespace GodotTools
             {
                 case MenuOptions.CreateSln:
                 {
-                    if (File.Exists(GodotSharpDirs.ProjectSlnPath) || File.Exists(GodotSharpDirs.ProjectCsProjPath))
+                    if (File.Exists(GodotSharpDirs.ProjectSlnPath))
                     {
                         ShowConfirmCreateSlnDialog();
                     }
@@ -144,7 +143,7 @@ namespace GodotTools
 
         private void BuildProjectPressed()
         {
-            if (!File.Exists(GodotSharpDirs.ProjectCsProjPath))
+            if (!File.Exists(GodotSharpDirs.ProjectSlnPath))
             {
                 if (!CreateProjectSolution())
                     return; // Failed to create project.
@@ -411,24 +410,6 @@ namespace GodotTools
             {
                 // Migrate solution from old configuration names to: Debug, ExportDebug and ExportRelease
                 DotNetSolution.MigrateFromOldConfigNames(GodotSharpDirs.ProjectSlnPath);
-
-                var msbuildProject = ProjectUtils.Open(GodotSharpDirs.ProjectCsProjPath)
-                                     ?? throw new InvalidOperationException("Cannot open C# project.");
-
-                // NOTE: The order in which changes are made to the project is important
-
-                // Migrate to MSBuild project Sdks style if using the old style
-                ProjectUtils.MigrateToProjectSdksStyle(msbuildProject, GodotSharpDirs.ProjectAssemblyName);
-
-                ProjectUtils.EnsureGodotSdkIsUpToDate(msbuildProject);
-
-                if (msbuildProject.HasUnsavedChanges)
-                {
-                    // Save a copy of the project before replacing it
-                    FileUtils.SaveBackupCopy(GodotSharpDirs.ProjectCsProjPath);
-
-                    msbuildProject.Save();
-                }
             }
             catch (Exception e)
             {
@@ -520,7 +501,7 @@ namespace GodotTools
             // Move Build button so it appears to the left of the Play button.
             _toolBarBuildButton.GetParent().MoveChild(_toolBarBuildButton, 0);
 
-            if (File.Exists(GodotSharpDirs.ProjectCsProjPath))
+            if (File.Exists(GodotSharpDirs.ProjectSlnPath))
             {
                 ApplyNecessaryChangesToSolution();
             }
