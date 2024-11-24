@@ -70,6 +70,13 @@ namespace GodotPlugins
                 _pluginLoadContext?.Unload();
                 _pluginLoadContext = null;
             }
+
+            [MethodImpl(MethodImplOptions.NoInlining)]
+            internal Assembly LoadFromAssemblyName(string assemblyName)
+            {
+                if (_pluginLoadContext == null) { throw new NullReferenceException("Plugin load context is null."); }
+                return _pluginLoadContext.LoadFromAssemblyName(new AssemblyName(assemblyName));
+            }
         }
 
         private static readonly List<AssemblyName> SharedAssemblies = new();
@@ -151,6 +158,17 @@ namespace GodotPlugins
                 string loadedAssemblyPath = _projectLoadContext.AssemblyLoadedPath ?? assemblyPath;
                 *outLoadedAssemblyPath = Marshaling.ConvertStringToNative(loadedAssemblyPath);
 
+                //if (_editorHint)
+                {
+                    var editorDependencies = Godot.ProjectSettings.GetSetting("dotnet/project/editor_dependencies", new Godot.Collections.Array<string>())
+                        .As<Godot.Collections.Array<string>>();
+
+                    foreach (var dependencyName in editorDependencies)
+                    {
+                        var referencedAssembly = _projectLoadContext.LoadFromAssemblyName(dependencyName);
+                        ScriptManagerBridge.LookupScriptsInAssembly(referencedAssembly);
+                    }
+                }
                 ScriptManagerBridge.LookupScriptsInAssembly(projectAssembly);
 
                 return godot_bool.True;
