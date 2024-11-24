@@ -74,7 +74,7 @@ namespace GodotTools.Build
 
         public void BuildProject()
         {
-            if (!File.Exists(GodotSharpDirs.ProjectCsProjPath))
+            if (!File.Exists(GodotSharpDirs.ProjectSlnPath))
                 return; // No project to build.
 
             if (!BuildManager.BuildProjectBlocking("Debug"))
@@ -95,7 +95,7 @@ namespace GodotTools.Build
 
         private void RebuildProject()
         {
-            if (!File.Exists(GodotSharpDirs.ProjectCsProjPath))
+            if (!File.Exists(GodotSharpDirs.ProjectSlnPath))
                 return; // No project to build.
 
             if (!BuildManager.BuildProjectBlocking("Debug", rebuild: true))
@@ -116,7 +116,7 @@ namespace GodotTools.Build
 
         private void CleanProject()
         {
-            if (!File.Exists(GodotSharpDirs.ProjectCsProjPath))
+            if (!File.Exists(GodotSharpDirs.ProjectSlnPath))
                 return; // No project to build.
 
             _ = BuildManager.CleanProjectBlocking("Debug");
