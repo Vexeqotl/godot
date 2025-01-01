@@ -3766,7 +3766,8 @@ int Main::start() {
 		// so that we don't lose their descriptions and default values in DocTools.
 		// Default values should be synced with mono_gd/gd_mono.cpp.
 		GLOBAL_DEF("dotnet/project/assembly_name", "");
-		GLOBAL_DEF("dotnet/project/solution_directory", "");
+		GLOBAL_DEF("dotnet/project/solution_name", "");
+		GLOBAL_DEF("dotnet/project/editor_dependencies", "");
 		GLOBAL_DEF(PropertyInfo(Variant::INT, "dotnet/project/assembly_reload_attempts", PROPERTY_HINT_RANGE, "1,16,1,or_greater"), 3);
 #endif
 

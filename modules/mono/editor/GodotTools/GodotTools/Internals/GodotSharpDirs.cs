@@ -70,14 +70,13 @@ namespace GodotTools.Internals
                 ProjectSettings.SetSetting("dotnet/project/assembly_name", _projectAssemblyName);
             }
 
-            string? slnParentDir = (string?)ProjectSettings.GetSetting("dotnet/project/solution_directory");
-            if (string.IsNullOrEmpty(slnParentDir))
-                slnParentDir = "res://";
-            else if (!slnParentDir.StartsWith("res://", System.StringComparison.Ordinal))
-                slnParentDir = "res://" + slnParentDir;
+            string? slnName = (string?)ProjectSettings.GetSetting("dotnet/project/solution_name");
+            if (string.IsNullOrEmpty(slnName))
+                slnName = _projectAssemblyName;
+            if (slnName.EndsWith(".sln"))
+                slnName = slnName.TrimSuffix(".sln");
 
-            _projectSlnPath = Path.Combine(ProjectSettings.GlobalizePath(slnParentDir),
-                string.Concat(_projectAssemblyName, ".sln"));
+            _projectSlnPath = ProjectSettings.GlobalizePath($"res://{slnName}.sln");
         }
 
         private static string? _projectAssemblyName;
