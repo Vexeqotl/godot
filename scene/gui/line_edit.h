@@ -87,6 +87,7 @@ private:
 	HorizontalAlignment alignment = HORIZONTAL_ALIGNMENT_LEFT;
 
 	bool editing = false;
+	bool keep_editing_on_text_submit = false;
 	bool editable = false;
 	bool pass = false;
 	bool text_changed_dirty = false;
@@ -248,6 +249,7 @@ private:
 	void _move_caret_end(bool p_select);
 	void _backspace(bool p_word = false, bool p_all_to_left = false);
 	void _delete(bool p_word = false, bool p_all_to_right = false);
+	void _texture_changed();
 
 protected:
 	bool _is_over_clear_button(const Point2 &p_pos) const;
@@ -265,6 +267,8 @@ public:
 	void edit();
 	void unedit();
 	bool is_editing() const;
+	void set_keep_editing_on_text_submit(bool p_enabled);
+	bool is_editing_kept_on_text_submit() const;
 
 	bool has_ime_text() const;
 	void cancel_ime();

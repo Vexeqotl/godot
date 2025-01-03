@@ -41,7 +41,6 @@
 #include "core/io/file_access.h"
 #include "core/object/ref_counted.h"
 #include "core/os/time.h"
-#include "core/templates/hash_map.h"
 #include "core/templates/list.h"
 #include "editor/renames_map_3_to_4.h"
 #include "modules/regex/regex.h"
@@ -1677,7 +1676,7 @@ void ProjectConverter3To4::process_gdscript_line(String &line, const RegExContai
 	}
 
 	// -- \t.func() -> \tsuper.func()       Object
-	if (line.contains("(") && line.contains(".")) {
+	if (line.contains_char('(') && line.contains_char('.')) {
 		line = reg_container.reg_super.sub(line, "$1super.$2", true); // TODO, not sure if possible, but for now this broke String text e.g. "Chosen .gitignore" -> "Chosen super.gitignore"
 	}
 

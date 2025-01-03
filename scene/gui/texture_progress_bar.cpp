@@ -30,8 +30,6 @@
 
 #include "texture_progress_bar.h"
 
-#include "core/config/engine.h"
-
 void TextureProgressBar::set_under_texture(const Ref<Texture2D> &p_texture) {
 	_set_texture(&under, p_texture);
 }
@@ -536,7 +534,7 @@ void TextureProgressBar::_notification(int p_what) {
 							}
 
 							// Draw a reference cross.
-							if (Engine::get_singleton()->is_editor_hint()) {
+							if (is_part_of_edited_scene()) {
 								Point2 p;
 
 								if (nine_patch_stretch) {

@@ -372,6 +372,16 @@ void EditorExportPlatformWeb::get_export_options(List<ExportOption> *r_options) 
 	r_options->push_back(ExportOption(PropertyInfo(Variant::COLOR, "progressive_web_app/background_color", PROPERTY_HINT_COLOR_NO_ALPHA), Color()));
 }
 
+bool EditorExportPlatformWeb::get_export_option_visibility(const EditorExportPreset *p_preset, const String &p_option) const {
+	bool advanced_options_enabled = p_preset->are_advanced_options_enabled();
+	if (p_option == "custom_template/debug" ||
+			p_option == "custom_template/release") {
+		return advanced_options_enabled;
+	}
+
+	return true;
+}
+
 String EditorExportPlatformWeb::get_name() const {
 	return "Web";
 }
@@ -817,7 +827,7 @@ Error EditorExportPlatformWeb::run(const Ref<EditorExportPreset> &p_preset, int 
 }
 
 Error EditorExportPlatformWeb::_export_project(const Ref<EditorExportPreset> &p_preset, int p_debug_flags) {
-	const String dest = EditorPaths::get_singleton()->get_cache_dir().path_join("web");
+	const String dest = EditorPaths::get_singleton()->get_temp_dir().path_join("web");
 	Ref<DirAccess> da = DirAccess::create(DirAccess::ACCESS_FILESYSTEM);
 	if (!da->dir_exists(dest)) {
 		Error err = da->make_dir_recursive(dest);
