@@ -272,6 +272,9 @@ namespace Godot.SourceGenerators
                 .Replace("<", "(Of ")
                 .Replace(">", ")");
 
+        public static bool IsGodotIgnoreAttribute(this INamedTypeSymbol symbol)
+            => symbol.FullQualifiedNameOmitGlobal() == GodotClasses.IgnoreAttr;
+
         public static bool IsGodotExportAttribute(this INamedTypeSymbol symbol)
             => symbol.FullQualifiedNameOmitGlobal() == GodotClasses.ExportAttr;
 
