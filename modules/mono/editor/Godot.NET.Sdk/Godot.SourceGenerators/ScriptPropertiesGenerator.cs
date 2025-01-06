@@ -120,7 +120,8 @@ namespace Godot.SourceGenerators
 
             var fieldSymbols = members
                 .Where(s => !s.IsStatic && s.Kind == SymbolKind.Field && !s.IsImplicitlyDeclared)
-                .Cast<IFieldSymbol>();
+                .Cast<IFieldSymbol>()
+                .Where(f => !f.GetAttributes().Any(a => a.AttributeClass?.IsGodotIgnoreAttribute() ?? false));
 
             var godotClassProperties = propertySymbols.WhereIsGodotCompatibleType(typeCache).ToArray();
             var godotClassFields = fieldSymbols.WhereIsGodotCompatibleType(typeCache).ToArray();

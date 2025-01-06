@@ -115,11 +115,13 @@ namespace Godot.SourceGenerators
             var propertySymbols = members
                 .Where(s => !s.IsStatic && s.Kind == SymbolKind.Property)
                 .Cast<IPropertySymbol>()
-                .Where(s => !s.IsIndexer && s.ExplicitInterfaceImplementations.Length == 0);
+                .Where(s => !s.IsIndexer && s.ExplicitInterfaceImplementations.Length == 0)
+                .Where(s => !s.GetAttributes().Any(a => a.AttributeClass?.IsGodotIgnoreAttribute() ?? false));
 
             var fieldSymbols = members
                 .Where(s => !s.IsStatic && s.Kind == SymbolKind.Field && !s.IsImplicitlyDeclared)
-                .Cast<IFieldSymbol>();
+                .Cast<IFieldSymbol>()
+                .Where(s => !s.GetAttributes().Any(a => a.AttributeClass?.IsGodotIgnoreAttribute() ?? false));
 
             // TODO: We should still restore read-only properties after reloading assembly. Two possible ways: reflection or turn RestoreGodotObjectData into a constructor overload.
             // Ignore properties without a getter, without a setter or with an init-only setter. Godot properties must be both readable and writable.
