@@ -5,6 +5,7 @@ namespace Godot.SourceGenerators
         public const string GodotObject = "Godot.GodotObject";
         public const string Node = "Godot.Node";
         public const string AssemblyHasScriptsAttr = "Godot.AssemblyHasScriptsAttribute";
+        public const string IgnoreAttr = "Godot.IgnoreAttribute";
         public const string ExportAttr = "Godot.ExportAttribute";
         public const string ExportCategoryAttr = "Godot.ExportCategoryAttribute";
         public const string ExportGroupAttr = "Godot.ExportGroupAttribute";
