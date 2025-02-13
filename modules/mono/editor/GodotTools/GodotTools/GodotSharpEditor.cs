@@ -428,19 +428,6 @@ namespace GodotTools
             return BuildManager.EditorBuildCallback();
         }
 
-        private void ApplyNecessaryChangesToSolution()
-        {
-            try
-            {
-                // Migrate solution from old configuration names to: Debug, ExportDebug and ExportRelease
-                DotNetSolution.MigrateFromOldConfigNames(GodotSharpDirs.ProjectSlnPath);
-            }
-            catch (Exception e)
-            {
-                GD.PushError(e.ToString());
-            }
-        }
-
         private void BuildStateChanged()
         {
             if (_bottomPanelBtn != null)
@@ -525,15 +512,6 @@ namespace GodotTools
             // Move Build button so it appears to the left of the Play button.
             _toolBarBuildButton.GetParent().MoveChild(_toolBarBuildButton, 0);
 
-            if (File.Exists(GodotSharpDirs.ProjectSlnPath))
-            {
-                ApplyNecessaryChangesToSolution();
-            }
-            else
-            {
-                _bottomPanelBtn.Hide();
-                _toolBarBuildButton.Hide();
-            }
             _menuPopup.AddItem("Create C# solution".TTR(), (int)MenuOptions.CreateSln);
 
             _menuPopup.IdPressed += _MenuOptionPressed;
