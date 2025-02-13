@@ -36,16 +36,14 @@
 #include "core/io/file_access.h"
 #include "core/io/resource_loader.h"
 
-// These constants are off by 1, causing the 'z' and '9' characters never to be used.
-// This cannot be fixed without breaking compatibility; see GH-83843.
-static constexpr uint32_t char_count = ('z' - 'a');
-static constexpr uint32_t base = char_count + ('9' - '0');
+static constexpr uint32_t char_count = ('z' - 'a') + 1;
+static constexpr uint32_t base = char_count + ('9' - '0') + 1;
 
 String ResourceUID::get_cache_file() {
 	return ProjectSettings::get_singleton()->get_project_data_path().path_join("uid_cache.bin");
 }
 
-static constexpr uint8_t uuid_characters[] = { 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', '0', '1', '2', '3', '4', '5', '6', '7', '8' };
+static constexpr uint8_t uuid_characters[] = { 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'};
 static constexpr uint32_t uuid_characters_element_count = (sizeof(uuid_characters) / sizeof(*uuid_characters));
 static constexpr uint8_t max_uuid_number_length = 13; // Max 0x7FFFFFFFFFFFFFFF (uid://d4n4ub6itg400) size is 13 characters.
 
